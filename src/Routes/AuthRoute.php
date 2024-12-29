@@ -13,9 +13,5 @@ class AuthRoute extends BaseRoute
             $group->post('/login', [AuthController::class, 'login']);
             $group->post('/register', [AuthController::class, 'register']);
         });
-
-        $this->app->group('/v1/user', function ($group) {
-            $group->get('/me', [AuthController::class, 'me']);
-        })->add(new AuthMiddleware());
     }
 }

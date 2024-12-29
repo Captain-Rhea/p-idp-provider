@@ -86,28 +86,4 @@ class AuthController
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
     }
-
-    /**
-     * GET /v1/auth/me - Get user info from JWT
-     */
-    public function me(Request $request, Response $response): Response
-    {
-        try {
-            $user = $request->getAttribute('user'); // User data from Middleware
-
-            if (!$user) {
-                return ResponseHandle::error($response, 'Unauthorized', 401);
-            }
-
-            $userModel = User::with('userInfo', 'roles', 'permissions')->find($user['user_id']);
-
-            if (!$userModel) {
-                return ResponseHandle::error($response, 'User not found', 404);
-            }
-
-            return ResponseHandle::success($response, $userModel->toArray(), 'User data retrieved successfully');
-        } catch (Exception $e) {
-            return ResponseHandle::error($response, $e->getMessage(), 500);
-        }
-    }
 }
