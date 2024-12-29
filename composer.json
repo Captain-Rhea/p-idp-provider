@@ -1,0 +1,25 @@
+{
+  "scripts": {
+    "start": "php -S localhost:3002 -t public",
+    "db-create": "vendor/bin/phinx create",
+    "db-migrate": "vendor/bin/phinx migrate",
+    "db-rollback": "vendor/bin/phinx rollback",
+    "db-status": "vendor/bin/phinx status",
+    "db-seed": "vendor/bin/phinx seed:run"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    }
+  },
+  "require": {
+    "slim/slim": "4.*",
+    "slim/psr7": "^1.7",
+    "vlucas/phpdotenv": "^5.6",
+    "illuminate/database": "^11.36",
+    "robmorgan/phinx": "^0.16.6",
+    "symfony/yaml": "^7.2",
+    "illuminate/pagination": "^11.36",
+    "firebase/php-jwt": "^6.10"
+  }
+}

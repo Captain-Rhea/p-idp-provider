@@ -1,0 +1,41 @@
+# Environment and configuration files
+.env
+.env.local
+.env.development
+.env.production
+
+# Vendor directory
+/vendor
+
+# Uploads directory (exclude uploaded files)
+public/uploads/
+
+# Logs and debug files
+*.log
+php-errors.log
+debug.log
+
+# Cache and temp files
+/cache/
+/tmp/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Editor or IDE specific files
+.idea/
+.vscode/
+
+# Composer files
+composer.lock
+
+# Phinx migration
+phinx.yml
+phinxlog.php
+
+# Node modules (if any JS dependencies are added)
+node_modules/
+
+# Ignore build artifacts
+/public/build/
