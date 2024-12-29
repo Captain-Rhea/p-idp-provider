@@ -6,8 +6,11 @@ use Exception;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use App\Helpers\ResponseHandle;
+use App\Helpers\VerifyUserStatus;
 use App\Models\User;
+use App\Models\UserInfo;
 use App\Utils\TokenUtils;
+use App\Utils\UserStatusUtils;
 
 class AuthController
 {
@@ -29,6 +32,11 @@ class AuthController
 
             if (!$user || !password_verify($password, $user->password)) {
                 return ResponseHandle::error($response, 'Invalid email or password', 401);
+            }
+
+            $statusCheckResponse = VerifyUserStatus::check($user->status, $response);
+            if ($statusCheckResponse) {
+                return $statusCheckResponse;
             }
 
             $roles = $user->roles()->pluck('name')->toArray();
@@ -60,7 +68,7 @@ class AuthController
             $lastName = $body['last_name'] ?? null;
             $nickname = $body['nickname'] ?? null;
 
-            if (!$email || !$password || !$firstName || !$lastName || $nickname) {
+            if (!$email || !$password || !$firstName || !$lastName || !$nickname) {
                 return ResponseHandle::error($response, 'Email, password, first name, and last name are required', 400);
             }
 
@@ -78,10 +86,56 @@ class AuthController
                 'first_name' => $firstName,
                 'last_name' => $lastName,
                 'nickname' => $nickname,
-                'phone' => $body['phone'] ?? null
+                'phone' => !empty($body['phone']) ? $body['phone'] : null
             ]);
 
             return ResponseHandle::success($response, ['user_id' => $user->user_id], 'Registration successful', 201);
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * POST /v1/auth/email-checking
+     */
+    public function emailChecking(Request $request, Response $response): Response
+    {
+        try {
+            $body = json_decode((string)$request->getBody(), true);
+            $email = $body['email'] ?? null;
+
+            if (!$email) {
+                return ResponseHandle::error($response, 'Email is required', 400);
+            }
+
+            if (User::whereRaw('LOWER(email) = ?', [strtolower($email)])->exists()) {
+                return ResponseHandle::error($response, 'Email already exists', 400);
+            }
+
+            return ResponseHandle::success($response, [], 'Email already in use', 200);
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * POST /v1/auth/nickname-checking
+     */
+    public function nicknameChecking(Request $request, Response $response): Response
+    {
+        try {
+            $body = json_decode((string)$request->getBody(), true);
+            $nickname = $body['nickname'] ?? null;
+
+            if (!$nickname) {
+                return ResponseHandle::error($response, 'Email is required', 400);
+            }
+
+            if (UserInfo::whereRaw('LOWER(nickname) = ?', [strtolower($nickname)])->exists()) {
+                return ResponseHandle::error($response, 'Nickname already exists', 400);
+            }
+
+            return ResponseHandle::success($response, [], 'Nickname already in use', 200);
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }

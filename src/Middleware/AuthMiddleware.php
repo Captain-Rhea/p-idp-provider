@@ -2,6 +2,8 @@
 
 namespace App\Middleware;
 
+use App\Helpers\VerifyUserStatus;
+use App\Models\User;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\MiddlewareInterface;
@@ -28,6 +30,15 @@ class AuthMiddleware implements MiddlewareInterface
         try {
             $decoded = TokenUtils::decodeToken($token);
             $request = $request->withAttribute('user', (array) $decoded);
+
+            $user = $request->getAttribute('user');
+            $userStatus = User::where('user_id', $user['user_id'])->first();
+
+            $statusCheckResponse = VerifyUserStatus::check($userStatus['status'], new \Slim\Psr7\Response());
+            if ($statusCheckResponse) {
+                return $statusCheckResponse;
+            }
+
             return $handler->handle($request);
         } catch (\Exception $e) {
             return $this->unauthorizedResponse($e->getMessage());
