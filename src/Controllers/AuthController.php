@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\UserInfo;
 use App\Utils\TokenUtils;
 use App\Helpers\LoginTransactionHandle;
+use App\Models\OtpTransaction;
 
 class AuthController
 {
@@ -174,6 +175,72 @@ class AuthController
 
             if (!$email || !$newPassword) {
                 return ResponseHandle::error($response, 'Email and new password are required', 400);
+            }
+
+            $user = User::whereRaw('LOWER(email) = ?', [strtolower($email)])->first();
+            if (!$user) {
+                return ResponseHandle::error($response, 'User not found', 404);
+            }
+
+            $user->password = password_hash($newPassword, PASSWORD_DEFAULT);
+            $user->save();
+
+            return ResponseHandle::success($response, [], 'Password reset successfully');
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * POST /v1/auth/verify-token
+     */
+    public function verifyToken(Request $request, Response $response): Response
+    {
+        try {
+            $body = json_decode((string)$request->getBody(), true);
+            $token = $body['token'] ?? null;
+
+            if (!$token) {
+                return ResponseHandle::error($response, 'Token is required', 400);
+            }
+
+            $isValidToken = TokenUtils::isValidToken($token);
+            if (!$isValidToken) {
+                return ResponseHandle::error($response, 'Invalid or expired token', 401);
+            }
+
+            return ResponseHandle::success($response, [], 'Token verified successfully');
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * POST /v1/auth/forget-password
+     */
+    public function forgotPassword(Request $request, Response $response): Response
+    {
+        try {
+            $body = json_decode((string)$request->getBody(), true);
+            $email = $body['email'] ?? null;
+            $refCode = $body['ref_code'] ?? null;
+            $otpCode = $body['otp_code'] ?? null;
+            $purpose = $body['purpose'] ?? null;
+            $newPassword = $body['new_password'] ?? null;
+
+            if (!$email || !$refCode || !$otpCode || !$purpose || !$newPassword) {
+                return ResponseHandle::error($response, 'All fields are required', 400);
+            }
+
+            $otp = OtpTransaction::where('email', strtolower($email))
+                ->where('ref_code', $refCode)
+                ->where('otp_code', $otpCode)
+                ->where('purpose', $purpose)
+                ->where('is_used', true)
+                ->first();
+
+            if (!$otp) {
+                return ResponseHandle::error($response, 'Invalid or unverified OTP', 400);
             }
 
             $user = User::whereRaw('LOWER(email) = ?', [strtolower($email)])->first();
