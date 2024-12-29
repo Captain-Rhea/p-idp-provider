@@ -14,6 +14,7 @@ class AuthRoute extends BaseRoute
             $group->post('/register', [AuthController::class, 'register']);
             $group->post('/email-checking', [AuthController::class, 'emailChecking']);
             $group->post('/nickname-checking', [AuthController::class, 'nicknameChecking']);
+            $group->post('/reset-password', [AuthController::class, 'resetPassword'])->add(new AuthMiddleware());
         });
     }
 }
