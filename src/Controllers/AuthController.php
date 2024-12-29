@@ -10,7 +10,7 @@ use App\Helpers\VerifyUserStatus;
 use App\Models\User;
 use App\Models\UserInfo;
 use App\Utils\TokenUtils;
-use App\Utils\UserStatusUtils;
+use App\Helpers\LoginTransactionHandle;
 
 class AuthController
 {
@@ -31,6 +31,14 @@ class AuthController
             $user = User::where('email', $email)->first();
 
             if (!$user || !password_verify($password, $user->password)) {
+
+                LoginTransactionHandle::logTransaction(
+                    $user->user_id,
+                    'failed',
+                    $request->getServerParams()['REMOTE_ADDR'],
+                    $request->getHeaderLine('User-Agent')
+                );
+
                 return ResponseHandle::error($response, 'Invalid email or password', 401);
             }
 
@@ -48,6 +56,13 @@ class AuthController
                 'last_name' => $user->last_name,
                 'role' => $roles
             ], 60 * 60 * 48);
+
+            LoginTransactionHandle::logTransaction(
+                $user->user_id,
+                'success',
+                $request->getServerParams()['REMOTE_ADDR'],
+                $request->getHeaderLine('User-Agent')
+            );
 
             return ResponseHandle::success($response, ['token' => $token], 'Login successful');
         } catch (Exception $e) {
