@@ -62,18 +62,24 @@ class AuthController
     {
         try {
             $body = json_decode((string)$request->getBody(), true);
-            $email = $body['email'] ?? null;
-            $password = $body['password'] ?? null;
-            $firstName = $body['first_name'] ?? null;
-            $lastName = $body['last_name'] ?? null;
-            $nickname = $body['nickname'] ?? null;
+
+            $email = isset($body['email']) ? strtolower(trim($body['email'])) : null;
+            $password = isset($body['password']) ? trim($body['password']) : null;
+            $firstName = isset($body['first_name']) ? ucfirst(strtolower(trim($body['first_name']))) : null;
+            $lastName = isset($body['last_name']) ? ucfirst(strtolower(trim($body['last_name']))) : null;
+            $nickname = isset($body['nickname']) ? trim($body['nickname']) : null;
+            $phone = isset($body['phone']) && trim($body['phone']) !== '' ? trim($body['phone']) : null;
 
             if (!$email || !$password || !$firstName || !$lastName || !$nickname) {
-                return ResponseHandle::error($response, 'Email, password, first name, and last name are required', 400);
+                return ResponseHandle::error($response, 'Email, password, first name, last name, and nickname are required', 400);
             }
 
-            if (User::where('email', $email)->exists()) {
+            if (User::whereRaw('LOWER(email) = ?', [strtolower($email)])->exists()) {
                 return ResponseHandle::error($response, 'Email already exists', 400);
+            }
+
+            if (UserInfo::whereRaw('LOWER(nickname) = ?', [strtolower($nickname)])->exists()) {
+                return ResponseHandle::error($response, 'Nickname already exists', 400);
             }
 
             $user = User::create([
@@ -86,7 +92,7 @@ class AuthController
                 'first_name' => $firstName,
                 'last_name' => $lastName,
                 'nickname' => $nickname,
-                'phone' => !empty($body['phone']) ? $body['phone'] : null
+                'phone' => $phone,
             ]);
 
             return ResponseHandle::success($response, ['user_id' => $user->user_id], 'Registration successful', 201);
@@ -136,6 +142,34 @@ class AuthController
             }
 
             return ResponseHandle::success($response, [], 'Nickname already in use', 200);
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * POST /v1/auth/reset-password
+     */
+    public function resetPassword(Request $request, Response $response): Response
+    {
+        try {
+            $body = json_decode((string)$request->getBody(), true);
+            $email = $body['email'] ?? null;
+            $newPassword = $body['new_password'] ?? null;
+
+            if (!$email || !$newPassword) {
+                return ResponseHandle::error($response, 'Email and new password are required', 400);
+            }
+
+            $user = User::whereRaw('LOWER(email) = ?', [strtolower($email)])->first();
+            if (!$user) {
+                return ResponseHandle::error($response, 'User not found', 404);
+            }
+
+            $user->password = password_hash($newPassword, PASSWORD_DEFAULT);
+            $user->save();
+
+            return ResponseHandle::success($response, [], 'Password reset successfully');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
