@@ -40,6 +40,7 @@ class UserController
             $userData = [
                 'user_id' => $userModel->user_id,
                 'email' => $userModel->email,
+                'updated_at' => $userModel->updated_at,
                 'status' => [
                     'id' => $userModel->status->id,
                     'name' => $userModel->status->name

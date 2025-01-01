@@ -16,6 +16,56 @@ use App\Models\User;
 class MemberController
 {
     /**
+     * GET /v1/member/invite
+     */
+    public function getInvitation(Request $request, Response $response): Response
+    {
+        try {
+            $queryParams = $request->getQueryParams();
+            $email = $queryParams['email'] ?? null;
+            $statusId = $queryParams['status_id'] ?? null;
+            $startDate = $queryParams['start_date'] ?? null;
+            $endDate = $queryParams['end_date'] ?? null;
+            $page = $queryParams['page'] ?? 1;
+            $perPage = $queryParams['per_page'] ?? 10;
+
+            $query = InviteMember::query();
+
+            // Apply filters
+            if ($email) {
+                $query->where('email', 'LIKE', '%' . $email . '%');
+            }
+
+            if ($statusId) {
+                $query->where('status_id', $statusId);
+            }
+
+            if ($startDate && $endDate) {
+                $query->whereBetween('created_at', [$startDate, $endDate]);
+            } elseif ($startDate) {
+                $query->whereDate('created_at', '>=', $startDate);
+            } elseif ($endDate) {
+                $query->whereDate('created_at', '<=', $endDate);
+            }
+
+            // Paginate results
+            $invites = $query->paginate($perPage, ['*'], 'page', $page);
+
+            return ResponseHandle::success($response, [
+                'pagination' => [
+                    'total' => $invites->total(),
+                    'per_page' => $invites->perPage(),
+                    'current_page' => $invites->currentPage(),
+                    'last_page' => $invites->lastPage(),
+                ],
+                'data' => $invites->items(),
+            ], 'Invitation list retrieved successfully');
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
      * POST /v1/invite-member
      */
     public function createInvitation(Request $request, Response $response): Response
@@ -95,35 +145,11 @@ class MemberController
             $mailer->AltBody = "You have been invited to join our platform. Your invitation code is: $refCode";
 
             // Send Email
-            $mailer->send();
+            // $mailer->send();
 
             return ResponseHandle::success($response, $invite, 'Invitation created successfully');
         } catch (PHPMailerException $e) {
             return ResponseHandle::error($response, 'Mailer Error: ' . $e->getMessage(), 500);
-        } catch (Exception $e) {
-            return ResponseHandle::error($response, $e->getMessage(), 500);
-        }
-    }
-
-    /**
-     * GET /v1/invite-member/{ref_code}
-     */
-    public function getInvitation(Request $request, Response $response, array $args): Response
-    {
-        try {
-            $refCode = $args['ref_code'] ?? null;
-
-            if (!$refCode) {
-                return ResponseHandle::error($response, 'Reference code is required', 400);
-            }
-
-            $invite = InviteMember::where('ref_code', $refCode)->first();
-
-            if (!$invite) {
-                return ResponseHandle::error($response, 'Invitation not found', 404);
-            }
-
-            return ResponseHandle::success($response, $invite->toArray(), 'Invitation retrieved successfully');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 class User extends Model
 {
@@ -40,5 +41,19 @@ class User extends Model
     public function userInfoTranslation()
     {
         return $this->hasMany(UserInfoTranslation::class, 'user_id');
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            $model->created_at = Carbon::now('Asia/Bangkok');
+            $model->updated_at = Carbon::now('Asia/Bangkok');
+        });
+
+        static::updating(function ($model) {
+            $model->updated_at = Carbon::now('Asia/Bangkok');
+        });
     }
 }

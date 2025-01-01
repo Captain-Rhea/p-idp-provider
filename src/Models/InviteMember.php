@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 class InviteMember extends Model
 {
@@ -25,5 +26,19 @@ class InviteMember extends Model
     public function status()
     {
         return $this->belongsTo(Status::class, 'status_id');
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            $model->created_at = Carbon::now('Asia/Bangkok');
+            $model->updated_at = Carbon::now('Asia/Bangkok');
+        });
+
+        static::updating(function ($model) {
+            $model->updated_at = Carbon::now('Asia/Bangkok');
+        });
     }
 }

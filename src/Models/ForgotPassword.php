@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 class ForgotPassword extends Model
 {
@@ -16,4 +17,18 @@ class ForgotPassword extends Model
         'is_used',
         'expires_at'
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            $model->created_at = Carbon::now('Asia/Bangkok');
+            $model->updated_at = Carbon::now('Asia/Bangkok');
+        });
+
+        static::updating(function ($model) {
+            $model->updated_at = Carbon::now('Asia/Bangkok');
+        });
+    }
 }

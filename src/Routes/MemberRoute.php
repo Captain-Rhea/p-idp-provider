@@ -10,6 +10,7 @@ class MemberRoute extends BaseRoute
     public function register(): void
     {
         $this->app->group('/v1/member', function ($group) {
+            $group->get('/invite', [MemberController::class, 'getInvitation'])->add(new AuthMiddleware());
             $group->post('/send/invite', [MemberController::class, 'createInvitation'])->add(new AuthMiddleware());
         });
     }
