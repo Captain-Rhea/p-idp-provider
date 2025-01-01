@@ -11,7 +11,10 @@ use App\Models\User;
 use App\Models\UserInfo;
 use App\Utils\TokenUtils;
 use App\Helpers\LoginTransactionHandle;
-use App\Models\OtpTransaction;
+use App\Models\ForgotPassword;
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as PHPMailerException;
+use Illuminate\Support\Carbon;
 
 class AuthController
 {
@@ -43,7 +46,7 @@ class AuthController
                 return ResponseHandle::error($response, 'Invalid email or password', 401);
             }
 
-            $statusCheckResponse = VerifyUserStatus::check($user->status, $response);
+            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
             if ($statusCheckResponse) {
                 return $statusCheckResponse;
             }
@@ -66,52 +69,6 @@ class AuthController
             );
 
             return ResponseHandle::success($response, ['token' => $token], 'Login successful');
-        } catch (Exception $e) {
-            return ResponseHandle::error($response, $e->getMessage(), 500);
-        }
-    }
-
-    /**
-     * POST /v1/auth/register - Register a new user
-     */
-    public function register(Request $request, Response $response): Response
-    {
-        try {
-            $body = json_decode((string)$request->getBody(), true);
-
-            $email = isset($body['email']) ? strtolower(trim($body['email'])) : null;
-            $password = isset($body['password']) ? trim($body['password']) : null;
-            $firstName = isset($body['first_name']) ? ucfirst(strtolower(trim($body['first_name']))) : null;
-            $lastName = isset($body['last_name']) ? ucfirst(strtolower(trim($body['last_name']))) : null;
-            $nickname = isset($body['nickname']) ? trim($body['nickname']) : null;
-            $phone = isset($body['phone']) && trim($body['phone']) !== '' ? trim($body['phone']) : null;
-
-            if (!$email || !$password || !$firstName || !$lastName || !$nickname) {
-                return ResponseHandle::error($response, 'Email, password, first name, last name, and nickname are required', 400);
-            }
-
-            if (User::whereRaw('LOWER(email) = ?', [strtolower($email)])->exists()) {
-                return ResponseHandle::error($response, 'Email already exists', 400);
-            }
-
-            if (UserInfo::whereRaw('LOWER(nickname) = ?', [strtolower($nickname)])->exists()) {
-                return ResponseHandle::error($response, 'Nickname already exists', 400);
-            }
-
-            $user = User::create([
-                'email' => $email,
-                'password' => password_hash($password, PASSWORD_DEFAULT),
-                'status' => 2,
-            ]);
-
-            $user->userInfo()->create([
-                'first_name' => $firstName,
-                'last_name' => $lastName,
-                'nickname' => $nickname,
-                'phone' => $phone,
-            ]);
-
-            return ResponseHandle::success($response, ['user_id' => $user->user_id], 'Registration successful', 201);
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
@@ -164,6 +121,30 @@ class AuthController
     }
 
     /**
+     * POST /v1/auth/verify-token
+     */
+    public function verifyToken(Request $request, Response $response): Response
+    {
+        try {
+            $body = json_decode((string)$request->getBody(), true);
+            $token = $body['token'] ?? null;
+
+            if (!$token) {
+                return ResponseHandle::error($response, 'Token is required', 400);
+            }
+
+            $isValidToken = TokenUtils::isValidToken($token);
+            if (!$isValidToken) {
+                return ResponseHandle::error($response, 'Invalid or expired token', 401);
+            }
+
+            return ResponseHandle::success($response, [], 'Token verified successfully');
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
      * POST /v1/auth/reset-password
      */
     public function resetPassword(Request $request, Response $response): Response
@@ -192,58 +173,153 @@ class AuthController
     }
 
     /**
-     * POST /v1/auth/verify-token
+     * POST /v1/auth/send/forgot-mail
      */
-    public function verifyToken(Request $request, Response $response): Response
+    public function sendForgotMail(Request $request, Response $response): Response
     {
         try {
             $body = json_decode((string)$request->getBody(), true);
-            $token = $body['token'] ?? null;
+            $recipientEmail = $body['email'] ?? null;
 
-            if (!$token) {
-                return ResponseHandle::error($response, 'Token is required', 400);
+            if (!$recipientEmail) {
+                return ResponseHandle::error($response, 'Recipient email is required', 400);
             }
 
-            $isValidToken = TokenUtils::isValidToken($token);
-            if (!$isValidToken) {
-                return ResponseHandle::error($response, 'Invalid or expired token', 401);
+            // Mark previous reset keys as expired
+            ForgotPassword::where('email', $recipientEmail)
+                ->where('is_used', false)
+                ->where('expires_at', '>', Carbon::now('Asia/Bangkok'))
+                ->update(['expires_at' => Carbon::now('Asia/Bangkok')]);
+
+            // Generate Reset Key
+            $resetKey = uniqid('RESET-', true);
+
+            // Save reset key to database
+            ForgotPassword::create([
+                'email' => $recipientEmail,
+                'reset_key' => $resetKey,
+                'is_used' => false,
+                'sent_at' => Carbon::now('Asia/Bangkok'),
+                'expires_at' => Carbon::now('Asia/Bangkok')->addHours(2),
+            ]);
+
+            // Load HTML Template
+            $templatePath = __DIR__ . '/../templates/reset_password_email.html';
+            if (!file_exists($templatePath)) {
+                throw new Exception('Email template not found');
             }
 
-            return ResponseHandle::success($response, [], 'Token verified successfully');
+            $frontendPath = $_ENV['FRONT_URL'] . "/" . $_ENV['FRONT_RESET_PATH'];
+            $templateContent = file_get_contents($templatePath);
+            $emailBody = str_replace(
+                ['{{frontend_path}}', '{{reset_key}}', '{{recipient_email}}'],
+                [$frontendPath, $resetKey, $recipientEmail],
+                $templateContent
+            );
+
+            // Send Email
+            $mailer = new PHPMailer(true);
+
+            // Server settings
+            $mailer->isSMTP();
+            $mailer->Host = $_ENV['SMTP_HOST'];
+            $mailer->SMTPAuth = true;
+            $mailer->Username = $_ENV['SMTP_USERNAME'];
+            $mailer->Password = $_ENV['SMTP_PASSWORD'];
+            $mailer->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+            $mailer->Port = (int)$_ENV['SMTP_PORT'];
+
+            // Email Headers
+            $mailer->setFrom($_ENV['SMTP_USERNAME'], 'Medmetro Support');
+            $mailer->addAddress($recipientEmail);
+
+            // Email Content
+            $mailer->isHTML(true);
+            $mailer->Subject = 'Password Reset Request';
+            $mailer->Body = $emailBody;
+            $mailer->AltBody = "Your reset key is: $resetKey";
+
+            // Send Email
+            $mailer->send();
+
+            return ResponseHandle::success($response, [], 'Reset password email sent successfully');
+        } catch (PHPMailerException $e) {
+            // Handle PHPMailer-specific exceptions
+            return ResponseHandle::error($response, 'Mailer Error: ' . $e->getMessage(), 500);
+        } catch (Exception $e) {
+            // Handle general exceptions
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * POST /v1/auth/send/forgot-mail/verify
+     */
+    public function forgotMailVerify(Request $request, Response $response): Response
+    {
+        try {
+            $body = json_decode((string)$request->getBody(), true);
+            $resetKey = $body['reset_key'] ?? null;
+
+            if (!$resetKey) {
+                return ResponseHandle::error($response, 'Reset key is required', 400);
+            }
+
+            $resetRecord = ForgotPassword::where('reset_key', $resetKey)->first();
+            if (!$resetRecord) {
+                return ResponseHandle::error($response, 'Invalid reset key', 404);
+            }
+
+            if ($resetRecord->expires_at < Carbon::now('Asia/Bangkok')) {
+                return ResponseHandle::error($response, 'Reset key has expired', 400);
+            }
+
+            if ($resetRecord->is_used) {
+                return ResponseHandle::error($response, 'Reset key has already been used', 400);
+            }
+
+            $responseData = [
+                'email' => $resetRecord->email
+            ];
+
+            return ResponseHandle::success($response, $responseData, 'Reset key is valid');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
     }
 
     /**
-     * POST /v1/auth/forget-password
+     * POST /v1/auth/send/forgot-mail/reset-password
      */
-    public function forgotPassword(Request $request, Response $response): Response
+    public function forgotMailResetNewPassword(Request $request, Response $response): Response
     {
         try {
             $body = json_decode((string)$request->getBody(), true);
             $email = $body['email'] ?? null;
-            $refCode = $body['ref_code'] ?? null;
-            $otpCode = $body['otp_code'] ?? null;
-            $purpose = $body['purpose'] ?? null;
+            $resetKey = $body['reset_key'] ?? null;
             $newPassword = $body['new_password'] ?? null;
 
-            if (!$email || !$refCode || !$otpCode || !$purpose || !$newPassword) {
-                return ResponseHandle::error($response, 'All fields are required', 400);
+            if (!$email || !$resetKey || !$newPassword) {
+                return ResponseHandle::error($response, 'Email, reset key, and new password are required', 400);
             }
 
-            $otp = OtpTransaction::where('email', strtolower($email))
-                ->where('ref_code', $refCode)
-                ->where('otp_code', $otpCode)
-                ->where('purpose', $purpose)
-                ->where('is_used', true)
+            $resetRecord = ForgotPassword::where('email', $email)
+                ->where('reset_key', $resetKey)
                 ->first();
 
-            if (!$otp) {
-                return ResponseHandle::error($response, 'Invalid or unverified OTP', 400);
+            if (!$resetRecord) {
+                return ResponseHandle::error($response, 'Invalid reset key or email', 404);
             }
 
-            $user = User::whereRaw('LOWER(email) = ?', [strtolower($email)])->first();
+            if ($resetRecord->expires_at < Carbon::now('Asia/Bangkok')) {
+                return ResponseHandle::error($response, 'Reset key has expired', 400);
+            }
+
+            if ($resetRecord->is_used) {
+                return ResponseHandle::error($response, 'Reset key has already been used', 400);
+            }
+
+            $user = User::where('email', $email)->first();
             if (!$user) {
                 return ResponseHandle::error($response, 'User not found', 404);
             }
@@ -251,7 +327,15 @@ class AuthController
             $user->password = password_hash($newPassword, PASSWORD_DEFAULT);
             $user->save();
 
-            return ResponseHandle::success($response, [], 'Password reset successfully');
+            $resetRecord->is_used = true;
+            $resetRecord->save();
+
+            $responseData = [
+                'email' => $user->email,
+                'reset_status' => 'success',
+            ];
+
+            return ResponseHandle::success($response, $responseData, 'Password has been reset successfully');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }

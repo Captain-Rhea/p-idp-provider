@@ -12,7 +12,7 @@ class EmailRoute extends BaseRoute
         $this->app->group('/v1/email', function ($group) {
             $group->post('/send/verify', [EmailController::class, 'sendVerifyEmail']);
             $group->post('/send/reset', [EmailController::class, 'sendResetPasswordEmail']);
-            $group->post('/otp/verify', [EmailController::class, 'verifyOtp']);
+            $group->post('/send/invite', [EmailController::class, 'sendInviteEmail'])->add(new AuthMiddleware());
         });
     }
 }

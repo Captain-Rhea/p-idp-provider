@@ -5,7 +5,7 @@
     "db-migrate": "vendor/bin/phinx migrate",
     "db-rollback": "vendor/bin/phinx rollback",
     "db-status": "vendor/bin/phinx status",
-    "db-seed": "vendor/bin/phinx seed:run"
+    "db-seed": "vendor/bin/phinx seed:run -s"
   },
   "autoload": {
     "psr-4": {

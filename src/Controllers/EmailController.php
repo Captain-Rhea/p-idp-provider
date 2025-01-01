@@ -7,6 +7,7 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use App\Helpers\ResponseHandle;
 use App\Models\OtpTransaction;
+use App\Models\InviteMember;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
 use Illuminate\Support\Carbon;
@@ -27,6 +28,47 @@ class EmailController
     public function sendResetPasswordEmail(Request $request, Response $response): Response
     {
         return $this->sendOtp($request, $response, 'password_reset');
+    }
+
+    /**
+     * POST /v1/email/invite
+     */
+    public function sendInviteEmail(Request $request, Response $response): Response
+    {
+        try {
+            $body = json_decode((string)$request->getBody(), true);
+            $recipientEmail = $body['email'] ?? null;
+            $inviterId = $body['inviter_id'] ?? null;
+
+            if (!$recipientEmail || !$inviterId) {
+                return ResponseHandle::error($response, 'Email and inviter ID are required', 400);
+            }
+
+            if (InviteMember::where('email', $recipientEmail)->where('status', 'pending')->exists()) {
+                return ResponseHandle::error($response, 'An active invitation already exists for this email', 400);
+            }
+
+            $refCode = uniqid('INV');
+            $expiresAt = Carbon::now()->addDays(7);
+            InviteMember::create([
+                'inviter_id' => $inviterId,
+                'email' => $recipientEmail,
+                'status' => 'pending',
+                'ref_code' => $refCode,
+                'expires_at' => $expiresAt,
+            ]);
+
+            $this->sendInvitationEmail($recipientEmail, $refCode, $expiresAt);
+
+            return ResponseHandle::success($response, [
+                'ref_code' => $refCode,
+                'expires_at' => $expiresAt->toDateTimeString(),
+            ], 'Invitation email sent successfully');
+        } catch (PHPMailerException $e) {
+            return ResponseHandle::error($response, 'Mailer Error: ' . $e->getMessage(), 500);
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
     }
 
     /**
@@ -75,7 +117,7 @@ class EmailController
             $mailer->Port = (int)$_ENV['SMTP_PORT'];
 
             // Email Headers
-            $mailer->setFrom($_ENV['SMTP_USERNAME'], 'MedMetro Support');
+            $mailer->setFrom($_ENV['SMTP_USERNAME'], 'Medmetro Support');
             $mailer->addAddress($recipientEmail);
 
             // Email Content
@@ -119,7 +161,36 @@ class EmailController
                     <p class="otp-code">$otpCode</p>
                     <p>This OTP will expire in 10 minutes.</p>
                     <p>If you did not request this, please ignore this email.</p>
-                    <p>Best regards,<br>MedMetro Support</p>
+                    <p>Best regards,<br>Medmetro Support</p>
+                </div>
+            </body>
+        </html>
+        HTML;
+    }
+
+    /**
+     * Generate Invitation Email HTML Content
+     */
+    private function generateInvitationEmail(string $refCode, Carbon $expiresAt): string
+    {
+        $inviteLink = $_ENV['FRONT_URL'] . "/" . $_ENV['FRONT_INVITE_PATH'] . "?ref_code=$refCode";
+        return <<<HTML
+        <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .button { padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h2>You Are Invited!</h2>
+                    <p>Hello,</p>
+                    <p>You have been invited to join our platform. Click the button below to accept:</p>
+                    <p><a href="$inviteLink" class="button">Accept Invitation</a></p>
+                    <p>Your invitation code is: <strong>$refCode</strong></p>
+                    <p>The invitation will expire on: <strong>{$expiresAt->toDateTimeString()}</strong></p>
                 </div>
             </body>
         </html>
@@ -167,5 +238,29 @@ class EmailController
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
+    }
+
+    // Helper function to send invitation emails
+    private function sendInvitationEmail(string $email, string $refCode, Carbon $expiresAt): void
+    {
+        $mailer = new PHPMailer(true);
+
+        $mailer->isSMTP();
+        $mailer->Host = $_ENV['SMTP_HOST'];
+        $mailer->SMTPAuth = true;
+        $mailer->Username = $_ENV['SMTP_USERNAME'];
+        $mailer->Password = $_ENV['SMTP_PASSWORD'];
+        $mailer->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        $mailer->Port = (int)$_ENV['SMTP_PORT'];
+
+        $mailer->setFrom($_ENV['SMTP_USERNAME'], 'Medmetro Support');
+        $mailer->addAddress($email);
+
+        $mailer->isHTML(true);
+        $mailer->Subject = 'You Are Invited!';
+        $mailer->Body = $this->generateInvitationEmail($refCode, $expiresAt);
+        $mailer->AltBody = "You are invited! Use this code: $refCode. Invitation expires on {$expiresAt->toDateTimeString()}.";
+
+        $mailer->send();
     }
 }

@@ -12,7 +12,7 @@ use App\Models\User;
 class UserController
 {
     /**
-     * GET /v1/user/me - Get user info from JWT
+     * GET /v1/user/me
      */
     public function me(Request $request, Response $response): Response
     {

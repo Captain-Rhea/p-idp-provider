@@ -34,7 +34,7 @@ class AuthMiddleware implements MiddlewareInterface
             $user = $request->getAttribute('user');
             $userStatus = User::where('user_id', $user['user_id'])->first();
 
-            $statusCheckResponse = VerifyUserStatus::check($userStatus['status'], new \Slim\Psr7\Response());
+            $statusCheckResponse = VerifyUserStatus::check($userStatus['status_id'], new \Slim\Psr7\Response());
             if ($statusCheckResponse) {
                 return $statusCheckResponse;
             }

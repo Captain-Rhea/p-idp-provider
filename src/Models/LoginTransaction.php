@@ -13,6 +13,11 @@ class LoginTransaction extends Model
         'status',
         'ip_address',
         'user_agent',
-        'created_at',
+        'created_at'
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 }
