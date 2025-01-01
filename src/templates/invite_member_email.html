@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Password Reset</title>
+    <title>Invitation to Join</title>
   </head>
   <body
     style="
@@ -40,15 +40,17 @@
           text-align: center;
         "
       >
-        Password Reset Request
+        Invitation to Join Our Platform
       </h2>
       <p style="margin-bottom: 1rem; color: #4a5568">Hello,</p>
       <p style="margin-bottom: 1rem; color: #4a5568">
-        You requested to reset your password. Click the button below to proceed:
+        You have been invited to join our platform as a
+        <strong>{{role_name}}</strong>. Click the button below to accept the
+        invitation:
       </p>
       <div style="text-align: center">
         <a
-          href="{{frontend_path}}?reset-key={{reset_key}}"
+          href="{{frontend_path}}?ref-code={{ref_code}}"
           style="
             display: inline-block;
             background-color: #ab8c72;
@@ -61,14 +63,15 @@
             margin-bottom: 24px;
           "
         >
-          Start Reset Password
+          Accept Invitation
         </a>
       </div>
       <p style="margin-bottom: 1rem; color: #4a5568">
-        This link will expire in <strong>2 hours</strong>.
+        This invitation will expire on
+        <strong>{{expires_at}}</strong>.
       </p>
       <p style="margin-bottom: 1rem; color: #4a5568">
-        If you did not request this, please ignore this email.
+        If you did not expect this invitation, please ignore this email.
       </p>
       <p style="margin-bottom: 1rem; color: #4a5568">
         Best regards,

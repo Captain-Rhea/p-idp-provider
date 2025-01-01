@@ -23,28 +23,41 @@ class UserController
                 return ResponseHandle::error($response, 'Unauthorized', 401);
             }
 
-            $userModel = User::with(['userInfo', 'roles', 'permissions'])->find($user['user_id']);
+            $userModel = User::with([
+                'status',
+                'userInfo',
+                'userInfoTranslation',
+                'roles',
+                'permissions'
+            ])->find($user['user_id']);
 
             if (!$userModel) {
                 return ResponseHandle::error($response, 'User not found', 404);
             }
 
-            $userStatus = Status::where('id', $userModel->status)->first();
+            $userStatus = Status::where('id', $userModel->status_id)->first();
 
             $userData = [
                 'user_id' => $userModel->user_id,
                 'email' => $userModel->email,
                 'status' => [
-                    'id' => $userStatus['id'],
-                    'name' => $userStatus['name']
+                    'id' => $userModel->status->id,
+                    'name' => $userModel->status->name
                 ],
                 'user_info' => $userModel->userInfo ? [
-                    'first_name' => $userModel->userInfo->first_name,
-                    'last_name' => $userModel->userInfo->last_name,
-                    'nickname' => $userModel->userInfo->nickname,
                     'phone' => $userModel->userInfo->phone,
-                    'avatar_url' => $userModel->userInfo->avatar_url,
+                    'avatar_id' => $userModel->avatar_id,
+                    'avatar_url' => $userModel->avatar_url,
                 ] : null,
+                'user_info_translation' => $userModel->userInfoTranslation->map(function ($translation) {
+                    return [
+                        'language_code' => $translation->language_code,
+                        'first_name' => $translation->first_name,
+                        'last_name' => $translation->last_name,
+                        'nickname' => $translation->nickname,
+                        'updated_at' => $translation->updated_at,
+                    ];
+                })->toArray(),
                 'roles' => $userModel->roles->map(function ($role) {
                     return [
                         'role_id' => $role->id,

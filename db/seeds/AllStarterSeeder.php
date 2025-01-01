@@ -59,10 +59,16 @@ class AllStarterSeeder extends AbstractSeed
     private function seedStatus(): void
     {
         $data = [
+            // Status fo user
             ['id' => 1, 'name' => 'active', 'description' => 'User is active and can use the system', 'created_at' => date('Y-m-d H:i:s')],
             ['id' => 2, 'name' => 'pending', 'description' => 'User registration is pending approval', 'created_at' => date('Y-m-d H:i:s')],
             ['id' => 3, 'name' => 'suspended', 'description' => 'User account is temporarily suspended', 'created_at' => date('Y-m-d H:i:s')],
             ['id' => 4, 'name' => 'deleted', 'description' => 'User account is deleted (soft delete)', 'created_at' => date('Y-m-d H:i:s')],
+            // Status for invite member
+            ['id' => 5, 'name' => 'invite_sent', 'description' => 'Invitation email sent to the member', 'created_at' => date('Y-m-d H:i:s')],
+            ['id' => 6, 'name' => 'invite_pending', 'description' => 'Invitation is pending action from the member', 'created_at' => date('Y-m-d H:i:s')],
+            ['id' => 7, 'name' => 'invite_accepted', 'description' => 'Invitation has been accepted by the member', 'created_at' => date('Y-m-d H:i:s')],
+            ['id' => 8, 'name' => 'invite_revoked', 'description' => 'Invitation has been revoked', 'created_at' => date('Y-m-d H:i:s')],
         ];
 
         $this->table('status')->insert($data)->saveData();
@@ -109,13 +115,13 @@ class AllStarterSeeder extends AbstractSeed
             ],
         ];
 
-        $userInfoTranslationsTable = $this->table('user_info_translations');
+        $userInfoTranslationsTable = $this->table('user_info_translation');
         $userInfoTranslationsTable->insert($userInfoTranslationsData)->saveData();
 
         $roleData = [
             'user_id' => $userId,
             'role_id' => 1,
-            'assigned_at' => date('Y-m-d H:i:s'),
+            'created_at' => date('Y-m-d H:i:s'),
         ];
 
         $userRoleTable = $this->table('user_role');
@@ -126,7 +132,7 @@ class AllStarterSeeder extends AbstractSeed
             return [
                 'user_id' => $userId,
                 'permission_id' => $permission['id'],
-                'granted_at' => date('Y-m-d H:i:s'),
+                'created_at' => date('Y-m-d H:i:s'),
             ];
         }, $permissions);
 

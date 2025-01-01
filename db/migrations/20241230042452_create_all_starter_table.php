@@ -58,8 +58,8 @@ final class CreateAllStarterTable extends AbstractMigration
             ->addForeignKey('user_id', 'users', 'user_id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
             ->create();
 
-        // ตาราง user_info_translations
-        $userInfo = $this->table('user_info_translations', ['if_not_exists' => true]);
+        // ตาราง user_info_translation
+        $userInfo = $this->table('user_info_translation', ['if_not_exists' => true]);
         $userInfo->addColumn('user_id', 'biginteger', ['signed' => false])
             ->addColumn('language_code', 'string', ['limit' => 10])
             ->addColumn('first_name', 'string', ['limit' => 255])
@@ -74,7 +74,7 @@ final class CreateAllStarterTable extends AbstractMigration
         $userRole = $this->table('user_role', ['if_not_exists' => true]);
         $userRole->addColumn('user_id', 'biginteger', ['signed' => false])
             ->addColumn('role_id', 'integer', ['signed' => false])
-            ->addColumn('assigned_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('created_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
             ->addForeignKey('user_id', 'users', 'user_id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
             ->addForeignKey('role_id', 'roles', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
             ->create();
@@ -83,7 +83,7 @@ final class CreateAllStarterTable extends AbstractMigration
         $userPermission = $this->table('user_permission', ['if_not_exists' => true]);
         $userPermission->addColumn('user_id', 'biginteger', ['signed' => false])
             ->addColumn('permission_id', 'integer', ['signed' => false])
-            ->addColumn('granted_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('created_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
             ->addForeignKey('user_id', 'users', 'user_id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
             ->addForeignKey('permission_id', 'permissions', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
             ->addIndex(['user_id', 'permission_id'], ['unique' => true])
@@ -103,13 +103,14 @@ final class CreateAllStarterTable extends AbstractMigration
         $inviteMember = $this->table('invite_member', ['if_not_exists' => true]);
         $inviteMember->addColumn('inviter_id', 'biginteger', ['signed' => false])
             ->addColumn('email', 'string', ['limit' => 255])
-            ->addColumn('status', 'enum', ['values' => ['pending', 'accepted', 'rejected', 'expired'], 'default' => 'pending'])
+            ->addColumn('status_id', 'integer', ['signed' => false])
             ->addColumn('ref_code', 'string', ['limit' => 50])
             ->addColumn('role_id', 'integer', ['signed' => false])
-            ->addColumn('sent_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
             ->addColumn('expires_at', 'timestamp', ['null' => true])
+            ->addColumn('created_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
             ->addColumn('updated_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP', 'update' => 'CURRENT_TIMESTAMP'])
             ->addForeignKey('inviter_id', 'users', 'user_id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
+            ->addForeignKey('status_id', 'status', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
             ->addIndex(['ref_code'], ['unique' => true])
             ->create();
 
@@ -119,7 +120,7 @@ final class CreateAllStarterTable extends AbstractMigration
             ->addColumn('email', 'string', ['limit' => 255])
             ->addColumn('reset_key', 'string', ['limit' => 100])
             ->addColumn('is_used', 'boolean', ['default' => false])
-            ->addColumn('sent_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('created_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
             ->addColumn('expires_at', 'timestamp', ['null' => true])
             ->addColumn('updated_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP', 'update' => 'CURRENT_TIMESTAMP'])
             ->addIndex(['email', 'reset_key'], ['unique' => true])

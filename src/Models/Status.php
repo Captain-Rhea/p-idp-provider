@@ -7,11 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 class Status extends Model
 {
     protected $table = 'status';
-    public $timestamps = false;
+    public $timestamps = true;
     protected $fillable = [
         'name',
-        'description',
-        'created_at',
-        'updated_at'
+        'description'
     ];
+
+    public function users()
+    {
+        return $this->hasMany(User::class, 'status_id');
+    }
 }

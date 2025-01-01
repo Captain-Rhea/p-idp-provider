@@ -3,11 +3,15 @@
 namespace App\Controllers;
 
 use Exception;
-use Illuminate\Support\Carbon;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as PHPMailerException;
+use Illuminate\Support\Carbon;
 use App\Models\InviteMember;
 use App\Helpers\ResponseHandle;
+use App\Models\Role;
+use App\Models\User;
 
 class MemberController
 {
@@ -18,32 +22,84 @@ class MemberController
     {
         try {
             $body = json_decode((string)$request->getBody(), true);
-            $inviterId = $body['inviter_id'] ?? null;
-            $email = $body['email'] ?? null;
+            $recipientEmail = $body['email'] ?? null;
+            $roleId = $body['role_id'] ?? null;
 
-            if (!$inviterId || !$email) {
-                return ResponseHandle::error($response, 'Inviter ID and email are required', 400);
+            $inviter = $request->getAttribute('user');
+
+            if (!$recipientEmail || !$roleId || !$inviter) {
+                return ResponseHandle::error($response, 'Recipient Email, Role ID, and Inviter ID are required', 400);
             }
 
-            if (InviteMember::where('email', $email)->where('status', 'pending')->exists()) {
-                return ResponseHandle::error($response, 'An active invitation already exists for this email', 400);
+            $user = User::whereRaw('LOWER(email) = ?', [strtolower($recipientEmail)])->first();
+            if ($user) {
+                return ResponseHandle::error($response, 'This email is already in use by another member.', 400);
             }
+
+            InviteMember::where('email', $recipientEmail)
+                ->whereIn('status_id', [5, 6])
+                ->where('expires_at', '>', Carbon::now('Asia/Bangkok'))
+                ->update([
+                    'expires_at' => Carbon::now('Asia/Bangkok'),
+                    'status_id' => 8,
+                ]);
 
             $refCode = uniqid('INV');
-            $expiresAt = Carbon::now()->addDays(7);
+            $expiresAt = Carbon::now('Asia/Bangkok')->addDays(7);
 
             $invite = InviteMember::create([
-                'inviter_id' => $inviterId,
-                'email' => $email,
-                'status' => 'pending',
+                'inviter_id' => $inviter['user_id'],
+                'email' => $recipientEmail,
+                'role_id' => $roleId,
+                'status_id' => 5,
                 'ref_code' => $refCode,
                 'expires_at' => $expiresAt,
             ]);
 
-            return ResponseHandle::success($response, [
-                'ref_code' => $invite->ref_code,
-                'expires_at' => $invite->expires_at->toDateTimeString(),
-            ], 'Invitation created successfully');
+            // Load HTML Template
+            $templatePath = __DIR__ . '/../templates/invite_member_email.html';
+            if (!file_exists($templatePath)) {
+                throw new Exception('Email template not found');
+            }
+
+            $templateContent = file_get_contents($templatePath);
+            $roleName = Role::where('id', $roleId)->value('name');
+
+            $frontendPath = $_ENV['FRONT_URL'] . "/" . $_ENV['FRONT_INVITE_PATH'];
+            $emailBody = str_replace(
+                ['{{frontend_path}}', '{{role_name}}', '{{ref_code}}', '{{recipient_email}}', '{{expires_at}}'],
+                [$frontendPath, $roleName, $refCode, $recipientEmail, $expiresAt],
+                $templateContent
+            );
+
+            // Send Email
+            $mailer = new PHPMailer(true);
+
+            // Server settings
+            $mailer->isSMTP();
+            $mailer->Host = $_ENV['SMTP_HOST'];
+            $mailer->SMTPAuth = true;
+            $mailer->Username = $_ENV['SMTP_USERNAME'];
+            $mailer->Password = $_ENV['SMTP_PASSWORD'];
+            $mailer->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+            $mailer->Port = (int)$_ENV['SMTP_PORT'];
+
+            // Email Headers
+            $mailer->setFrom($_ENV['SMTP_USERNAME'], 'Medmetro Support');
+            $mailer->addAddress($recipientEmail);
+
+            // Email Content
+            $mailer->isHTML(true);
+            $mailer->Subject = 'Invitation to Join Our Platform';
+            $mailer->Body = $emailBody;
+            $mailer->AltBody = "You have been invited to join our platform. Your invitation code is: $refCode";
+
+            // Send Email
+            $mailer->send();
+
+            return ResponseHandle::success($response, $invite, 'Invitation created successfully');
+        } catch (PHPMailerException $e) {
+            return ResponseHandle::error($response, 'Mailer Error: ' . $e->getMessage(), 500);
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }

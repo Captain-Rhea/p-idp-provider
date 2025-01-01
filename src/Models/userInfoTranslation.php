@@ -4,15 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class LoginTransaction extends Model
+class UserInfoTranslation extends Model
 {
-    protected $table = 'login_transaction';
-    public $timestamps = false;
+    protected $table = 'user_info_translation';
+    public $timestamps = true;
     protected $fillable = [
         'user_id',
-        'status',
-        'ip_address',
-        'user_agent'
+        'language_code',
+        'first_name',
+        'last_name',
+        'nickname'
     ];
 
     public function user()
