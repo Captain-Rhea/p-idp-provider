@@ -22,7 +22,9 @@ final class CreateAllStarterTable extends AbstractMigration
         $users->addColumn('user_id', 'biginteger', ['identity' => true, 'signed' => false])
             ->addColumn('email', 'string', ['limit' => 255])
             ->addColumn('password', 'string', ['limit' => 255])
-            ->addColumn('status_id', 'integer', ['signed' => false, 'null' => true]) // เชื่อมกับ status
+            ->addColumn('status_id', 'integer', ['signed' => false, 'null' => true])
+            ->addColumn('avatar_id', 'integer', ['signed' => false, 'null' => true])
+            ->addColumn('avatar_url', 'text')
             ->addColumn('created_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
             ->addColumn('updated_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP', 'update' => 'CURRENT_TIMESTAMP'])
             ->addIndex(['email'], ['unique' => true])
@@ -50,12 +52,19 @@ final class CreateAllStarterTable extends AbstractMigration
         // ตาราง user_info
         $userInfo = $this->table('user_info', ['if_not_exists' => true]);
         $userInfo->addColumn('user_id', 'biginteger', ['signed' => false])
+            ->addColumn('phone', 'string', ['limit' => 15, 'null' => true])
+            ->addColumn('created_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('updated_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP', 'update' => 'CURRENT_TIMESTAMP'])
+            ->addForeignKey('user_id', 'users', 'user_id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
+            ->create();
+
+        // ตาราง user_info_translations
+        $userInfo = $this->table('user_info_translations', ['if_not_exists' => true]);
+        $userInfo->addColumn('user_id', 'biginteger', ['signed' => false])
+            ->addColumn('language_code', 'string', ['limit' => 10])
             ->addColumn('first_name', 'string', ['limit' => 255])
             ->addColumn('last_name', 'string', ['limit' => 255])
             ->addColumn('nickname', 'string', ['limit' => 255])
-            ->addColumn('phone', 'string', ['limit' => 15, 'null' => true])
-            ->addColumn('avatar_id', 'integer', ['signed' => false, 'null' => true])
-            ->addColumn('avatar_url', 'text')
             ->addColumn('created_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
             ->addColumn('updated_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP', 'update' => 'CURRENT_TIMESTAMP'])
             ->addForeignKey('user_id', 'users', 'user_id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
@@ -96,8 +105,9 @@ final class CreateAllStarterTable extends AbstractMigration
             ->addColumn('email', 'string', ['limit' => 255])
             ->addColumn('status', 'enum', ['values' => ['pending', 'accepted', 'rejected', 'expired'], 'default' => 'pending'])
             ->addColumn('ref_code', 'string', ['limit' => 50])
+            ->addColumn('role_id', 'integer', ['signed' => false])
+            ->addColumn('sent_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
             ->addColumn('expires_at', 'timestamp', ['null' => true])
-            ->addColumn('created_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
             ->addColumn('updated_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP', 'update' => 'CURRENT_TIMESTAMP'])
             ->addForeignKey('inviter_id', 'users', 'user_id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
             ->addIndex(['ref_code'], ['unique' => true])
@@ -111,6 +121,7 @@ final class CreateAllStarterTable extends AbstractMigration
             ->addColumn('is_used', 'boolean', ['default' => false])
             ->addColumn('sent_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
             ->addColumn('expires_at', 'timestamp', ['null' => true])
+            ->addColumn('updated_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP', 'update' => 'CURRENT_TIMESTAMP'])
             ->addIndex(['email', 'reset_key'], ['unique' => true])
             ->create();
     }

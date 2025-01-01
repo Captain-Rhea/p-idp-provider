@@ -83,14 +83,34 @@ class AllStarterSeeder extends AbstractSeed
 
         $userInfoData = [
             'user_id' => $userId,
-            'first_name' => 'Rhea',
-            'last_name' => 'Captain',
-            'nickname' => 'Rhea',
+            'phone' => '0930271716',
             'created_at' => date('Y-m-d H:i:s'),
         ];
 
         $userInfoTable = $this->table('user_info');
         $userInfoTable->insert($userInfoData)->saveData();
+
+        $userInfoTranslationsData = [
+            [
+                'user_id' => $userId,
+                'language_code' => 'en',
+                'first_name' => 'Rhea',
+                'last_name' => 'Captain',
+                'nickname' => 'Rhea',
+                'created_at' => date('Y-m-d H:i:s'),
+            ],
+            [
+                'user_id' => $userId,
+                'language_code' => 'th',
+                'first_name' => 'Rhea',
+                'last_name' => 'Captain',
+                'nickname' => 'Rhea',
+                'created_at' => date('Y-m-d H:i:s'),
+            ],
+        ];
+
+        $userInfoTranslationsTable = $this->table('user_info_translations');
+        $userInfoTranslationsTable->insert($userInfoTranslationsData)->saveData();
 
         $roleData = [
             'user_id' => $userId,
