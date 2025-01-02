@@ -6,7 +6,6 @@ use Exception;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use App\Helpers\ResponseHandle;
-use App\Models\Status;
 use App\Models\User;
 
 class UserController
@@ -34,8 +33,6 @@ class UserController
             if (!$userModel) {
                 return ResponseHandle::error($response, 'User not found', 404);
             }
-
-            $userStatus = Status::where('id', $userModel->status_id)->first();
 
             $userData = [
                 'user_id' => $userModel->user_id,

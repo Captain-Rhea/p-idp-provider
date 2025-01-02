@@ -3,6 +3,8 @@
 namespace App\Database;
 
 use Illuminate\Database\Capsule\Manager as Capsule;
+use Illuminate\Events\Dispatcher;
+use Illuminate\Container\Container;
 
 class Connection
 {
@@ -20,6 +22,7 @@ class Connection
             'prefix'    => '',
         ]);
 
+        $capsule->setEventDispatcher(new Dispatcher(new Container));
         $capsule->setAsGlobal();
         $capsule->bootEloquent();
     }

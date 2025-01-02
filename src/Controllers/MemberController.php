@@ -23,7 +23,7 @@ class MemberController
         try {
             $queryParams = $request->getQueryParams();
             $email = $queryParams['email'] ?? null;
-            $statusId = $queryParams['status_id'] ?? null;
+            $statusIds = $queryParams['status_id'] ?? null;
             $startDate = $queryParams['start_date'] ?? null;
             $endDate = $queryParams['end_date'] ?? null;
             $page = $queryParams['page'] ?? 1;
@@ -36,8 +36,9 @@ class MemberController
                 $query->where('email', 'LIKE', '%' . $email . '%');
             }
 
-            if ($statusId) {
-                $query->where('status_id', $statusId);
+            if ($statusIds) {
+                $statusIds = is_array($statusIds) ? $statusIds : explode(',', $statusIds);
+                $query->whereIn('status_id', $statusIds);
             }
 
             if ($startDate && $endDate) {
@@ -66,7 +67,7 @@ class MemberController
     }
 
     /**
-     * POST /v1/invite-member
+     * POST /v1/member/send/invite
      */
     public function createInvitation(Request $request, Response $response): Response
     {
@@ -86,13 +87,16 @@ class MemberController
                 return ResponseHandle::error($response, 'This email is already in use by another member.', 400);
             }
 
-            InviteMember::where('email', $recipientEmail)
+            $invites = InviteMember::where('email', $recipientEmail)
                 ->whereIn('status_id', [5, 6])
                 ->where('expires_at', '>', Carbon::now('Asia/Bangkok'))
-                ->update([
-                    'expires_at' => Carbon::now('Asia/Bangkok'),
-                    'status_id' => 8,
-                ]);
+                ->get();
+
+            foreach ($invites as $invite) {
+                $invite->expires_at = Carbon::now('Asia/Bangkok');
+                $invite->status_id = 8;
+                $invite->save();
+            }
 
             $refCode = uniqid('INV');
             $expiresAt = Carbon::now('Asia/Bangkok')->addDays(7);
@@ -103,7 +107,7 @@ class MemberController
                 'role_id' => $roleId,
                 'status_id' => 5,
                 'ref_code' => $refCode,
-                'expires_at' => $expiresAt,
+                'expires_at' => $expiresAt
             ]);
 
             // Load HTML Template
@@ -145,7 +149,7 @@ class MemberController
             $mailer->AltBody = "You have been invited to join our platform. Your invitation code is: $refCode";
 
             // Send Email
-            // $mailer->send();
+            $mailer->send();
 
             return ResponseHandle::success($response, $invite, 'Invitation created successfully');
         } catch (PHPMailerException $e) {
@@ -156,7 +160,68 @@ class MemberController
     }
 
     /**
-     * POST /v1/invite-member/accept
+     * PUT /v1/member/invite/reject/{id}
+     */
+    public function rejectInvitation(Request $request, Response $response, $args): Response
+    {
+        try {
+            $inviteId = $args['id'] ?? null;
+
+            if (!$inviteId) {
+                return ResponseHandle::error($response, 'Invite ID is required', 400);
+            }
+
+            $invite = InviteMember::find($inviteId);
+
+            if (!$invite) {
+                return ResponseHandle::error($response, 'Invalid invitation', 404);
+            }
+
+            $invite->update([
+                'status_id' => 8,
+                'expires_at' => Carbon::now('Asia/Bangkok'),
+            ]);
+
+            return ResponseHandle::success($response, [], 'Invitation rejected successfully');
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * POST /v1/member/invite/verify
+     */
+    public function verifyInvitation(Request $request, Response $response): Response
+    {
+        try {
+            $body = json_decode((string)$request->getBody(), true);
+            $refCode = $body['ref_code'] ?? null;
+            $email = $body['email'] ?? null;
+
+            if (!$refCode || !$email) {
+                return ResponseHandle::error($response, 'Reference code and email are required', 400);
+            }
+
+            $invite = InviteMember::where('ref_code', $refCode)
+                ->where('email', $email)
+                ->where('status_id', 6)
+                ->first();
+
+            if (!$invite) {
+                return ResponseHandle::error($response, 'Invalid invitation', 400);
+            }
+
+            // Update invitation status
+            $invite->update(['status' => 'rejected']);
+
+            return ResponseHandle::success($response, [], 'Invitation rejected successfully');
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * POST /v1/member/invite/accept
      */
     public function acceptInvitation(Request $request, Response $response): Response
     {
@@ -172,7 +237,7 @@ class MemberController
             $invite = InviteMember::where('ref_code', $refCode)
                 ->where('email', $email)
                 ->where('status', 'pending')
-                ->where('expires_at', '>', Carbon::now())
+                ->where('expires_at', '>', Carbon::now('Asia/Bangkok'))
                 ->first();
 
             if (!$invite) {
@@ -183,38 +248,6 @@ class MemberController
             $invite->update(['status' => 'accepted']);
 
             return ResponseHandle::success($response, [], 'Invitation accepted successfully');
-        } catch (Exception $e) {
-            return ResponseHandle::error($response, $e->getMessage(), 500);
-        }
-    }
-
-    /**
-     * POST /v1/invite-member/reject
-     */
-    public function rejectInvitation(Request $request, Response $response): Response
-    {
-        try {
-            $body = json_decode((string)$request->getBody(), true);
-            $refCode = $body['ref_code'] ?? null;
-            $email = $body['email'] ?? null;
-
-            if (!$refCode || !$email) {
-                return ResponseHandle::error($response, 'Reference code and email are required', 400);
-            }
-
-            $invite = InviteMember::where('ref_code', $refCode)
-                ->where('email', $email)
-                ->where('status', 'pending')
-                ->first();
-
-            if (!$invite) {
-                return ResponseHandle::error($response, 'Invalid invitation', 400);
-            }
-
-            // Update invitation status
-            $invite->update(['status' => 'rejected']);
-
-            return ResponseHandle::success($response, [], 'Invitation rejected successfully');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }

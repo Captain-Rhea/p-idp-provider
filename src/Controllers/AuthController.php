@@ -144,10 +144,15 @@ class AuthController
             }
 
             // Mark previous reset keys as expired
-            ForgotPassword::where('email', $recipientEmail)
+            $forgots = ForgotPassword::where('email', $recipientEmail)
                 ->where('is_used', false)
                 ->where('expires_at', '>', Carbon::now('Asia/Bangkok'))
-                ->update(['expires_at' => Carbon::now('Asia/Bangkok')]);
+                ->get();
+
+            foreach ($forgots as $forgot) {
+                $forgot->expires_at = Carbon::now('Asia/Bangkok');
+                $forgot->save();
+            }
 
             // Generate Reset Key
             $resetKey = uniqid('RESET-', true);
@@ -158,7 +163,7 @@ class AuthController
                 'reset_key' => $resetKey,
                 'is_used' => false,
                 'sent_at' => Carbon::now('Asia/Bangkok'),
-                'expires_at' => Carbon::now('Asia/Bangkok')->addHours(2),
+                'expires_at' => Carbon::now('Asia/Bangkok')->addHours(2)
             ]);
 
             // Load HTML Template

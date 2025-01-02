@@ -22,8 +22,7 @@ class LoginTransactionHandle
             'user_id' => $userId,
             'status' => $status,
             'ip_address' => $ipAddress ?? 'Unknown',
-            'user_agent' => $userAgent ?? 'Unknown',
-            'created_at' => Carbon::now(),
+            'user_agent' => $userAgent ?? 'Unknown'
         ]);
     }
 
@@ -51,7 +50,7 @@ class LoginTransactionHandle
      */
     public static function countFailedAttempts(int $userId, int $minutes): int
     {
-        $timeThreshold = Carbon::now()->subMinutes($minutes);
+        $timeThreshold = Carbon::now('Asia/Bangkok')->subMinutes($minutes);
 
         return LoginTransaction::where('user_id', $userId)
             ->where('status', 'failed')
