@@ -60,13 +60,12 @@ class AllStarterSeeder extends AbstractSeed
     {
         $data = [
             ['id' => 1, 'name' => 'active', 'description' => 'User is active and can use the system', 'created_at' => $dateNow->toDateTimeString()],
-            ['id' => 2, 'name' => 'pending', 'description' => 'User registration is pending approval', 'created_at' => $dateNow->toDateTimeString()],
-            ['id' => 3, 'name' => 'suspended', 'description' => 'User account is temporarily suspended', 'created_at' => $dateNow->toDateTimeString()],
-            ['id' => 4, 'name' => 'deleted', 'description' => 'User account is deleted (soft delete)', 'created_at' => $dateNow->toDateTimeString()],
-            ['id' => 5, 'name' => 'invite_sent', 'description' => 'Invitation email sent to the member', 'created_at' => $dateNow->toDateTimeString()],
-            ['id' => 6, 'name' => 'invite_pending', 'description' => 'Invitation is pending action from the member', 'created_at' => $dateNow->toDateTimeString()],
-            ['id' => 7, 'name' => 'invite_accepted', 'description' => 'Invitation has been accepted by the member', 'created_at' => $dateNow->toDateTimeString()],
-            ['id' => 8, 'name' => 'invite_revoked', 'description' => 'Invitation has been revoked', 'created_at' => $dateNow->toDateTimeString()],
+            ['id' => 2, 'name' => 'suspended', 'description' => 'User account is temporarily suspended', 'created_at' => $dateNow->toDateTimeString()],
+            ['id' => 3, 'name' => 'deleted', 'description' => 'User account is deleted (soft delete)', 'created_at' => $dateNow->toDateTimeString()],
+            ['id' => 4, 'name' => 'invite_sent', 'description' => 'Invitation email sent to the member', 'created_at' => $dateNow->toDateTimeString()],
+            ['id' => 5, 'name' => 'invite_pending', 'description' => 'Invitation is pending action from the member', 'created_at' => $dateNow->toDateTimeString()],
+            ['id' => 6, 'name' => 'invite_accepted', 'description' => 'Invitation has been accepted by the member', 'created_at' => $dateNow->toDateTimeString()],
+            ['id' => 7, 'name' => 'invite_revoked', 'description' => 'Invitation has been revoked', 'created_at' => $dateNow->toDateTimeString()],
         ];
 
         $this->table('status')->insert($data)->saveData();

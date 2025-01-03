@@ -115,13 +115,13 @@ class MemberController
             }
 
             $invites = InviteMember::where('email', $recipientEmail)
-                ->whereIn('status_id', [5, 6])
+                ->whereIn('status_id', [4, 5])
                 ->where('expires_at', '>', Carbon::now('Asia/Bangkok'))
                 ->get();
 
             foreach ($invites as $invite) {
                 $invite->expires_at = Carbon::now('Asia/Bangkok');
-                $invite->status_id = 8;
+                $invite->status_id = 7;
                 $invite->save();
             }
 
@@ -132,7 +132,7 @@ class MemberController
                 'inviter_id' => $inviter['user_id'],
                 'email' => $recipientEmail,
                 'role_id' => $roleId,
-                'status_id' => 5,
+                'status_id' => 4,
                 'ref_code' => $refCode,
                 'expires_at' => $expiresAt
             ]);
@@ -176,7 +176,7 @@ class MemberController
             $mailer->AltBody = "You have been invited to join our platform. Your invitation code is: $refCode";
 
             // Send Email
-            // $mailer->send();
+            $mailer->send();
 
             return ResponseHandle::success($response, $invite, 'Invitation created successfully');
         } catch (PHPMailerException $e) {
@@ -205,7 +205,7 @@ class MemberController
             }
 
             $invite->update([
-                'status_id' => 8,
+                'status_id' => 7,
                 'expires_at' => Carbon::now('Asia/Bangkok'),
             ]);
 
@@ -229,14 +229,14 @@ class MemberController
             }
 
             $invite = InviteMember::where('ref_code', $refCode)
-                ->whereIn('status_id', [5, 6])
+                ->whereIn('status_id', [4, 5])
                 ->first();
 
             if (!$invite) {
                 return ResponseHandle::error($response, 'Invalid invitation', 400);
             }
 
-            $invite->update(['status_id' => 6]);
+            $invite->update(['status_id' => 5]);
 
             return ResponseHandle::success($response, [], 'Invitation verify successfully');
         } catch (Exception $e) {
@@ -260,7 +260,7 @@ class MemberController
 
             $invite = InviteMember::where('ref_code', $refCode)
                 ->where('email', $email)
-                ->where('status_id', 6)
+                ->where('status_id', 5)
                 ->where('expires_at', '>', Carbon::now('Asia/Bangkok'))
                 ->first();
 
@@ -268,7 +268,7 @@ class MemberController
                 return ResponseHandle::error($response, 'Invalid or expired invitation', 400);
             }
 
-            $invite->update(['status_id' => 7]);
+            $invite->update(['status_id' => 6]);
 
             return ResponseHandle::success($response, [], 'Invitation accepted successfully');
         } catch (Exception $e) {
@@ -277,7 +277,141 @@ class MemberController
     }
 
     /**
-     * POST /v1/auth/create/member
+     * GET /v1/member
+     */
+    public function getMembers(Request $request, Response $response): Response
+    {
+        try {
+            // ดึง Query Parameters
+            $queryParams = $request->getQueryParams();
+            $userId = $queryParams['user_id'] ?? null;
+            $statusIds = $queryParams['status_id'] ?? null;
+            $email = $queryParams['email'] ?? null;
+            $firstName = $queryParams['first_name'] ?? null;
+            $lastName = $queryParams['last_name'] ?? null;
+            $nickname = $queryParams['nickname'] ?? null;
+            $phone = $queryParams['phone'] ?? null;
+            $roleId = $queryParams['role_id'] ?? null;
+            $startDate = $queryParams['start_date'] ?? null;
+            $endDate = $queryParams['end_date'] ?? null;
+            $page = $queryParams['page'] ?? 1;
+            $perPage = $queryParams['per_page'] ?? 10;
+
+            // สร้าง Query Builder
+            $query = User::with([
+                'status',
+                'userInfo',
+                'userInfoTranslation',
+                'roles'
+            ]);
+
+            // Apply Filters
+            if ($userId) {
+                $query->where('user_id', $userId);
+            }
+
+            if ($statusIds) {
+                $statusIds = is_array($statusIds) ? $statusIds : explode(',', $statusIds);
+                $query->whereIn('status_id', $statusIds);
+            }
+
+            if ($email) {
+                $query->where('email', 'LIKE', '%' . $email . '%');
+            }
+
+            if ($firstName) {
+                $query->whereHas('userInfoTranslation', function ($q) use ($firstName) {
+                    $q->where('first_name', 'LIKE', '%' . $firstName . '%');
+                });
+            }
+
+            if ($lastName) {
+                $query->whereHas('userInfoTranslation', function ($q) use ($lastName) {
+                    $q->where('last_name', 'LIKE', '%' . $lastName . '%');
+                });
+            }
+
+            if ($nickname) {
+                $query->whereHas('userInfoTranslation', function ($q) use ($nickname) {
+                    $q->where('nickname', 'LIKE', '%' . $nickname . '%');
+                });
+            }
+
+            if ($phone) {
+                $query->whereHas('userInfo', function ($q) use ($phone) {
+                    $q->where('phone', 'LIKE', '%' . $phone . '%');
+                });
+            }
+
+            if ($roleId) {
+                $roleIds = is_array($roleId) ? $roleId : explode(',', $roleId);
+                $query->whereHas('roles', function ($q) use ($roleIds) {
+                    $q->whereIn('role_id', $roleIds);
+                });
+            }
+
+            if ($startDate && $endDate) {
+                $query->whereBetween('created_at', [$startDate, $endDate]);
+            } elseif ($startDate) {
+                $query->whereDate('created_at', '>=', $startDate);
+            } elseif ($endDate) {
+                $query->whereDate('created_at', '<=', $endDate);
+            }
+
+            // Paginate Results
+            $members = $query->paginate($perPage, ['*'], 'page', $page);
+
+            // จัดรูปแบบข้อมูลสำหรับ Response
+            $memberData = collect($members->items())->map(function ($userModel) {
+                return [
+                    'user_id' => $userModel->user_id,
+                    'email' => $userModel->email,
+                    'created_at' => $userModel->created_at,
+                    'updated_at' => $userModel->updated_at,
+                    'status' => [
+                        'id' => $userModel->status->id,
+                        'name' => $userModel->status->name
+                    ],
+                    'user_info' => $userModel->userInfo ? [
+                        'phone' => $userModel->userInfo->phone,
+                        'avatar_id' => $userModel->userInfo->avatar_id,
+                        'avatar_url' => $userModel->userInfo->avatar_url,
+                    ] : null,
+                    'user_info_translation' => $userModel->userInfoTranslation->map(function ($translation) {
+                        return [
+                            'language_code' => $translation->language_code,
+                            'first_name' => $translation->first_name,
+                            'last_name' => $translation->last_name,
+                            'nickname' => $translation->nickname,
+                            'updated_at' => $translation->updated_at,
+                        ];
+                    })->toArray(),
+                    'roles' => $userModel->roles->map(function ($role) {
+                        return [
+                            'role_id' => $role->id,
+                            'name' => $role->name,
+                            'description' => $role->description,
+                        ];
+                    })->toArray()
+                ];
+            });
+
+            return ResponseHandle::success($response, [
+                'pagination' => [
+                    'total' => $members->total(),
+                    'per_page' => $members->perPage(),
+                    'current_page' => $members->currentPage(),
+                    'last_page' => $members->lastPage(),
+                ],
+                'data' => $memberData
+            ], 'Member list retrieved successfully');
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * POST /v1/member/create
      */
     public function createMember(Request $request, Response $response): Response
     {
@@ -368,6 +502,113 @@ class MemberController
             return ResponseHandle::success($response, [], 'Member has been created successfully');
         } catch (Exception $e) {
             Capsule::rollBack();
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * DELETE /v1/member/delete/{id}
+     */
+    public function permanentlyDeleteMember(Request $request, Response $response, $args): Response
+    {
+        try {
+            $userId = $args['id'] ?? null;
+
+            if (!$userId) {
+                return ResponseHandle::error($response, 'User ID is required', 400);
+            }
+
+            $user = User::find($userId);
+
+            if (!$user) {
+                return ResponseHandle::error($response, 'User not found', 404);
+            }
+
+            $user->delete();
+
+            return ResponseHandle::success($response, [], 'Member has been permanently deleted successfully');
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * DELETE /v1/member/delete/soft/{id}
+     */
+    public function softDeleteMember(Request $request, Response $response, $args): Response
+    {
+        try {
+            $userId = $args['id'] ?? null;
+
+            if (!$userId) {
+                return ResponseHandle::error($response, 'User ID is required', 400);
+            }
+
+            $user = User::find($userId);
+
+            if (!$user) {
+                return ResponseHandle::error($response, 'User not found', 404);
+            }
+
+            $user->status_id = 3;
+            $user->save();
+
+            return ResponseHandle::success($response, [], 'Member has been soft deleted successfully');
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * PUT /v1/member/suspend/{id}
+     */
+    public function suspendMember(Request $request, Response $response, $args): Response
+    {
+        try {
+            $userId = $args['id'] ?? null;
+
+            if (!$userId) {
+                return ResponseHandle::error($response, 'User ID is required', 400);
+            }
+
+            $user = User::find($userId);
+
+            if (!$user) {
+                return ResponseHandle::error($response, 'User not found', 404);
+            }
+
+            $user->status_id = 2;
+            $user->save();
+
+            return ResponseHandle::success($response, [], 'Member has been suspended successfully');
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * PUT /v1/member/active/{id}
+     */
+    public function activeMember(Request $request, Response $response, $args): Response
+    {
+        try {
+            $userId = $args['id'] ?? null;
+
+            if (!$userId) {
+                return ResponseHandle::error($response, 'User ID is required', 400);
+            }
+
+            $user = User::find($userId);
+
+            if (!$user) {
+                return ResponseHandle::error($response, 'User not found', 404);
+            }
+
+            $user->status_id = 1;
+            $user->save();
+
+            return ResponseHandle::success($response, [], 'Member has been actived successfully');
+        } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
     }

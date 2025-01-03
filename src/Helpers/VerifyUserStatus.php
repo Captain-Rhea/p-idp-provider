@@ -21,8 +21,6 @@ class VerifyUserStatus
                 return ResponseHandle::error($response, 'Account not found', 404);
             case UserStatusUtils::SUSPENDED:
                 return ResponseHandle::error($response, 'Your account is temporarily suspended', 401);
-            case UserStatusUtils::PENDING:
-                return ResponseHandle::error($response, 'Your account is pending approval', 401);
             case UserStatusUtils::ACTIVE:
                 return null;
             default:
