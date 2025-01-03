@@ -22,6 +22,7 @@
     "illuminate/pagination": "^11.36",
     "firebase/php-jwt": "^6.10",
     "phpmailer/phpmailer": "^6.9",
-    "illuminate/events": "^11.36"
+    "illuminate/events": "^11.36",
+    "illuminate/support": "^11.37"
   }
 }
