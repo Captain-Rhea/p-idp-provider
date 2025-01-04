@@ -247,7 +247,7 @@ class MemberController
             $invite->update(['status_id' => 5]);
 
             $inviteData = [
-                'email' => $invite->email,
+                'recipient_email' => $invite->recipient_email,
                 'ref_code' => $invite->ref_code,
                 'role_id' => $invite->role_id,
                 'expires_at' => $invite->expires_at,
@@ -267,7 +267,7 @@ class MemberController
         try {
             $body = json_decode((string)$request->getBody(), true);
             $refCode = $body['ref_code'] ?? null;
-            $email = $body['email'] ?? null;
+            $recipientEmail = $body['recipient_email'] ?? null;
             $password = $body['password'] ?? null;
             $roleId = $body['role_id'] ?? null;
             $phone = $body['phone'] ?? null;
@@ -278,12 +278,12 @@ class MemberController
             $lastNameEn = $body['last_name_en'] ?? null;
             $nicknameEn = $body['nickname_en'] ?? null;
 
-            if (!$refCode || !$email || !$password || !$roleId || !$phone) {
+            if (!$refCode || !$recipientEmail || !$password || !$roleId || !$phone) {
                 return ResponseHandle::error($response, 'Ref Code, Email, password, role ID and phone are required', 400);
             }
 
             $invite = InviteMember::where('ref_code', $refCode)
-                ->where('email', $email)
+                ->where('recipient_email', $recipientEmail)
                 ->where('status_id', 5)
                 ->where('expires_at', '>', Carbon::now('Asia/Bangkok'))
                 ->first();
@@ -292,14 +292,15 @@ class MemberController
                 return ResponseHandle::error($response, 'Invalid or expired invitation', 400);
             }
 
-            if (User::where('email', $email)->exists()) {
-                return ResponseHandle::error($response, 'This email is already in use.', 400);
+            $user = User::whereRaw('LOWER(email) = ?', [strtolower($recipientEmail)])->first();
+            if ($user) {
+                return ResponseHandle::error($response, 'This email is already in use by another member.', 400);
             }
 
             Capsule::beginTransaction();
 
             $user = User::create([
-                'email' => $email,
+                'email' => $recipientEmail,
                 'password' => password_hash($password, PASSWORD_DEFAULT),
                 'status_id' => 1
             ]);
