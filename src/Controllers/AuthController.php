@@ -313,7 +313,8 @@ class AuthController
             }
 
             $responseData = [
-                'email' => $resetRecord->email
+                'recipient_email' => $resetRecord->recipient_email,
+                'reset_key' => $resetRecord->reset_key,
             ];
 
             return ResponseHandle::success($response, $responseData, 'Reset key is valid');
@@ -329,15 +330,15 @@ class AuthController
     {
         try {
             $body = json_decode((string)$request->getBody(), true);
-            $email = $body['email'] ?? null;
+            $recipientEmail = $body['recipient_email'] ?? null;
             $resetKey = $body['reset_key'] ?? null;
             $newPassword = $body['new_password'] ?? null;
 
-            if (!$email || !$resetKey || !$newPassword) {
+            if (!$recipientEmail || !$resetKey || !$newPassword) {
                 return ResponseHandle::error($response, 'Email, reset key, and new password are required', 400);
             }
 
-            $resetRecord = ForgotPassword::where('email', $email)
+            $resetRecord = ForgotPassword::where('recipient_email', $recipientEmail)
                 ->where('reset_key', $resetKey)
                 ->first();
 
@@ -353,7 +354,7 @@ class AuthController
                 return ResponseHandle::error($response, 'Reset key has already been used', 400);
             }
 
-            $user = User::where('email', $email)->first();
+            $user = User::whereRaw('LOWER(email) = ?', [strtolower($recipientEmail)])->first();
             if (!$user) {
                 return ResponseHandle::error($response, 'User not found', 404);
             }
