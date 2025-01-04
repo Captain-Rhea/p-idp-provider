@@ -162,6 +162,21 @@ class AuthController
             // Paginate results
             $forgotPasswords = $query->paginate($perPage, ['*'], 'page', $page);
 
+            $formattedData = collect($forgotPasswords->items())->map(function ($forgot) {
+                return [
+                    'forgot_id' => $forgot->forgot_id,
+                    'recipient_email' => $forgot->recipient_email,
+                    'domain' => $forgot->domain,
+                    'path' => $forgot->path,
+                    'reset_key' => $forgot->reset_key,
+                    'is_used' => $forgot->is_used,
+                    'forgot_link' => $forgot->domain . '/' . $forgot->path . '?reset_key=' . $forgot->reset_key,
+                    'expires_at' => $forgot->expires_at,
+                    'created_at' => $forgot->created_at,
+                    'updated_at' => $forgot->updated_at,
+                ];
+            });
+
             return ResponseHandle::success($response, [
                 'pagination' => [
                     'total' => $forgotPasswords->total(),
@@ -169,7 +184,7 @@ class AuthController
                     'current_page' => $forgotPasswords->currentPage(),
                     'last_page' => $forgotPasswords->lastPage(),
                 ],
-                'data' => $forgotPasswords->items(),
+                'data' => $formattedData,
             ], 'Forgot passwords retrieved successfully');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
