@@ -8,12 +8,12 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use App\Helpers\ResponseHandle;
 use App\Models\User;
 
-class UserController
+class MyMemberController
 {
     /**
-     * GET /v1/user/me
+     * GET /v1/my-member/profile
      */
-    public function me(Request $request, Response $response): Response
+    public function myProfile(Request $request, Response $response): Response
     {
         try {
             $user = $request->getAttribute('user');

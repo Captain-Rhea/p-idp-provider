@@ -18,7 +18,7 @@ use Illuminate\Support\Carbon;
 class AuthController
 {
     /**
-     * POST /v1/auth/login - Login and generate JWT token
+     * POST /v1/auth/login
      */
     public function login(Request $request, Response $response): Response
     {
@@ -43,6 +43,59 @@ class AuthController
                 );
 
                 return ResponseHandle::error($response, 'Invalid email or password', 401);
+            }
+
+            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
+            if ($statusCheckResponse) {
+                return $statusCheckResponse;
+            }
+
+            $roles = $user->roles()->pluck('name')->toArray();
+
+            $token = TokenUtils::generateToken([
+                'user_id' => $user->user_id,
+                'email' => $user->email,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'role' => $roles
+            ], 60 * 60 * 48);
+
+            LoginTransactionHandle::logTransaction(
+                $user->user_id,
+                'success',
+                $request->getServerParams()['REMOTE_ADDR'],
+                $request->getHeaderLine('User-Agent')
+            );
+
+            return ResponseHandle::success($response, ['token' => $token], 'Login successful');
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * POST /v1/auth/is-login
+     */
+    public function isLogin(Request $request, Response $response): Response
+    {
+        try {
+            $getUser = $request->getAttribute('user');
+
+            if (!$getUser) {
+                return ResponseHandle::error($response, 'Unauthorized', 401);
+            }
+
+            $user = User::where('user_id', $getUser['user_id'])->first();
+
+            if (!$user) {
+                LoginTransactionHandle::logTransaction(
+                    $getUser->user_id ?? 'unknown',
+                    'failed',
+                    $request->getServerParams()['REMOTE_ADDR'],
+                    $request->getHeaderLine('User-Agent')
+                );
+
+                return ResponseHandle::error($response, 'User not found', 404);
             }
 
             $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
