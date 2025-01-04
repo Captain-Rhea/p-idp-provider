@@ -15,7 +15,6 @@ class Connection
      */
     public static function initialize(): void
     {
-        // ตรวจสอบตัวแปร .env ที่จำเป็น
         $requiredEnv = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASS'];
         foreach ($requiredEnv as $key) {
             if (empty($_ENV[$key])) {
@@ -23,7 +22,6 @@ class Connection
             }
         }
 
-        // ตั้งค่า Capsule Manager
         $capsule = new Capsule();
         $capsule->addConnection([
             'driver'    => 'mysql',
@@ -36,13 +34,8 @@ class Connection
             'prefix'    => '',
         ]);
 
-        // ตั้งค่า Event Dispatcher และ Container
         $capsule->setEventDispatcher(new Dispatcher(new Container()));
-
-        // ทำให้ Capsule Manager ใช้งานได้ทั่วทั้งโปรเจกต์
         $capsule->setAsGlobal();
-
-        // เริ่มการทำงานของ Eloquent ORM
         $capsule->bootEloquent();
     }
 }
