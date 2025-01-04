@@ -97,8 +97,10 @@ final class CreateAllStarterTable extends AbstractMigration
         // ตาราง invite_member
         $inviteMember = $this->table('invite_member', ['if_not_exists' => true]);
         $inviteMember->addColumn('inviter_id', 'biginteger', ['signed' => false])
-            ->addColumn('email', 'string', ['limit' => 255])
+            ->addColumn('recipient_email', 'string', ['limit' => 255])
             ->addColumn('status_id', 'integer', ['signed' => false])
+            ->addColumn('domain', 'string', ['limit' => 255])
+            ->addColumn('path', 'string', ['limit' => 255])
             ->addColumn('ref_code', 'string', ['limit' => 50])
             ->addColumn('role_id', 'integer', ['signed' => false])
             ->addColumn('expires_at', 'timestamp', ['null' => true])
@@ -112,13 +114,15 @@ final class CreateAllStarterTable extends AbstractMigration
         // ตาราง forgot_password
         $forgotPassword = $this->table('forgot_password', ['id' => false, 'primary_key' => ['forgot_id'], 'if_not_exists' => true]);
         $forgotPassword->addColumn('forgot_id', 'biginteger', ['identity' => true, 'signed' => false])
-            ->addColumn('email', 'string', ['limit' => 255])
+            ->addColumn('recipient_email', 'string', ['limit' => 255])
+            ->addColumn('domain', 'string', ['limit' => 255])
+            ->addColumn('path', 'string', ['limit' => 255])
             ->addColumn('reset_key', 'string', ['limit' => 100])
             ->addColumn('is_used', 'boolean', ['default' => false])
             ->addColumn('expires_at', 'timestamp', ['null' => true])
             ->addColumn('created_at', 'timestamp', ['null' => true])
             ->addColumn('updated_at', 'timestamp', ['null' => true])
-            ->addIndex(['email', 'reset_key'], ['unique' => true])
+            ->addIndex(['recipient_email', 'reset_key'], ['unique' => true])
             ->create();
     }
 }

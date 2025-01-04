@@ -11,8 +11,10 @@ class InviteMember extends Model
     public $timestamps = true;
     protected $fillable = [
         'inviter_id',
-        'email',
         'status_id',
+        'recipient_email',
+        'domain',
+        'path',
         'ref_code',
         'role_id',
         'expires_at'

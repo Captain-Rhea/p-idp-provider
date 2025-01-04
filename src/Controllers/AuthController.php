@@ -126,13 +126,64 @@ class AuthController
     }
 
     /**
+     * GET /v1/auth/forgot-password
+     */
+    public function getForgotPasswords(Request $request, Response $response): Response
+    {
+        try {
+            $queryParams = $request->getQueryParams();
+            $page = $queryParams['page'] ?? 1;
+            $perPage = $queryParams['per_page'] ?? 10;
+            $recipientEmail = $queryParams['recipient_email'] ?? null;
+            $isUseds = $queryParams['is_used'] ?? null;
+            $startDate = $queryParams['start_date'] ?? null;
+            $endDate = $queryParams['end_date'] ?? null;
+
+            $query = ForgotPassword::query();
+
+            // Apply filters
+            if ($recipientEmail) {
+                $query->where('recipient_email', 'LIKE', '%' . $recipientEmail . '%');
+            }
+
+            if ($isUseds) {
+                $isUseds = is_array($isUseds) ? $isUseds : explode(',', $isUseds);
+                $query->whereIn('is_used', $isUseds);
+            }
+
+            if ($startDate && $endDate) {
+                $query->whereBetween('created_at', [$startDate, $endDate]);
+            } elseif ($startDate) {
+                $query->whereDate('created_at', '>=', $startDate);
+            } elseif ($endDate) {
+                $query->whereDate('created_at', '<=', $endDate);
+            }
+
+            // Paginate results
+            $forgotPasswords = $query->paginate($perPage, ['*'], 'page', $page);
+
+            return ResponseHandle::success($response, [
+                'pagination' => [
+                    'total' => $forgotPasswords->total(),
+                    'per_page' => $forgotPasswords->perPage(),
+                    'current_page' => $forgotPasswords->currentPage(),
+                    'last_page' => $forgotPasswords->lastPage(),
+                ],
+                'data' => $forgotPasswords->items(),
+            ], 'Forgot passwords retrieved successfully');
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
      * POST /v1/auth/send/forgot-mail
      */
     public function sendForgotMail(Request $request, Response $response): Response
     {
         try {
             $body = json_decode((string)$request->getBody(), true);
-            $recipientEmail = $body['email'] ?? null;
+            $recipientEmail = $body['recipient_email'] ?? null;
 
             if (!$recipientEmail) {
                 return ResponseHandle::error($response, 'Recipient email is required', 400);
@@ -144,7 +195,7 @@ class AuthController
             }
 
             // Mark previous reset keys as expired
-            $forgots = ForgotPassword::where('email', $recipientEmail)
+            $forgots = ForgotPassword::where('recipient_email', $recipientEmail)
                 ->where('is_used', false)
                 ->where('expires_at', '>', Carbon::now('Asia/Bangkok'))
                 ->get();
@@ -159,7 +210,9 @@ class AuthController
 
             // Save reset key to database
             ForgotPassword::create([
-                'email' => $recipientEmail,
+                'recipient_email' => $recipientEmail,
+                'domain' => $_ENV['FRONT_URL'],
+                'path' => $_ENV['FRONT_RESET_PATH'],
                 'reset_key' => $resetKey,
                 'is_used' => false,
                 'sent_at' => Carbon::now('Asia/Bangkok'),
@@ -202,8 +255,11 @@ class AuthController
             $mailer->Body = $emailBody;
             $mailer->AltBody = "Your reset key is: $resetKey";
 
-            // Send Email
-            $mailer->send();
+            $isSendEnabled = filter_var($_ENV['SEND_STATUS'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            if ($isSendEnabled) {
+                // Send Email
+                $mailer->send();
+            }
 
             return ResponseHandle::success($response, [], 'Reset password email sent successfully');
         } catch (PHPMailerException $e) {

@@ -175,8 +175,11 @@ class MemberController
             $mailer->Body = $emailBody;
             $mailer->AltBody = "You have been invited to join our platform. Your invitation code is: $refCode";
 
-            // Send Email
-            $mailer->send();
+            $isSendEnabled = filter_var($_ENV['SEND_STATUS'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            if ($isSendEnabled) {
+                // Send Email
+                $mailer->send();
+            }
 
             return ResponseHandle::success($response, $invite, 'Invitation created successfully');
         } catch (PHPMailerException $e) {
@@ -230,6 +233,7 @@ class MemberController
 
             $invite = InviteMember::where('ref_code', $refCode)
                 ->whereIn('status_id', [4, 5])
+                ->where('expires_at', '>', Carbon::now('Asia/Bangkok'))
                 ->first();
 
             if (!$invite) {
@@ -238,7 +242,14 @@ class MemberController
 
             $invite->update(['status_id' => 5]);
 
-            return ResponseHandle::success($response, [], 'Invitation verify successfully');
+            $inviteData = [
+                'email' => $invite->email,
+                'ref_code' => $invite->ref_code,
+                'role_id' => $invite->role_id,
+                'expires_at' => $invite->expires_at,
+            ];
+
+            return ResponseHandle::success($response, $inviteData, 'Invitation verify successfully');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
@@ -253,9 +264,18 @@ class MemberController
             $body = json_decode((string)$request->getBody(), true);
             $refCode = $body['ref_code'] ?? null;
             $email = $body['email'] ?? null;
+            $password = $body['password'] ?? null;
+            $roleId = $body['role_id'] ?? null;
+            $phone = $body['phone'] ?? null;
+            $firstNameTh = $body['first_name_th'] ?? null;
+            $lastNameTh = $body['last_name_th'] ?? null;
+            $nicknameTh = $body['nickname_th'] ?? null;
+            $firstNameEn = $body['first_name_en'] ?? null;
+            $lastNameEn = $body['last_name_en'] ?? null;
+            $nicknameEn = $body['nickname_en'] ?? null;
 
-            if (!$refCode || !$email) {
-                return ResponseHandle::error($response, 'Reference code and email are required', 400);
+            if (!$refCode || !$email || !$password || !$roleId || !$phone) {
+                return ResponseHandle::error($response, 'Ref Code, Email, password, role ID and phone are required', 400);
             }
 
             $invite = InviteMember::where('ref_code', $refCode)
@@ -268,10 +288,78 @@ class MemberController
                 return ResponseHandle::error($response, 'Invalid or expired invitation', 400);
             }
 
+            if (User::where('email', $email)->exists()) {
+                return ResponseHandle::error($response, 'This email is already in use.', 400);
+            }
+
+            Capsule::beginTransaction();
+
+            $user = User::create([
+                'email' => $email,
+                'password' => password_hash($password, PASSWORD_DEFAULT),
+                'status_id' => 1
+            ]);
+
+            UserInfo::create([
+                'user_id' => $user->user_id,
+                'phone' => $phone
+            ]);
+
+            $translations = [
+                [
+                    'user_id' => $user->user_id,
+                    'language_code' => 'th',
+                    'first_name' => $firstNameTh ?? '-',
+                    'last_name' => $lastNameTh ?? '-',
+                    'nickname' => $nicknameTh ?? '-',
+                ],
+                [
+                    'user_id' => $user->user_id,
+                    'language_code' => 'en',
+                    'first_name' => $firstNameEn ?? '-',
+                    'last_name' => $lastNameEn ?? '-',
+                    'nickname' => $nicknameEn ?? '-',
+                ],
+            ];
+
+            foreach ($translations as $translation) {
+                UserInfoTranslation::create($translation);
+            }
+
+
+            UserRole::create([
+                'user_id' => $user->user_id,
+                'role_id' => $roleId
+            ]);
+
+            $permissions = Permission::pluck('id')->toArray();
+            $excludePermissions = [];
+
+            if ($roleId == 2) {
+                $excludePermissions = [2];
+            } elseif ($roleId == 3) {
+                $excludePermissions = [2, 3, 4, 6, 8, 9, 10];
+            }
+
+            $filteredPermissions = array_diff($permissions, $excludePermissions);
+
+            $userPermissions = [];
+            foreach ($filteredPermissions as $permissionId) {
+                $userPermissions[] = [
+                    'user_id' => $user->user_id,
+                    'permission_id' => $permissionId,
+                ];
+            }
+
+            UserPermission::insert($userPermissions);
+
             $invite->update(['status_id' => 6]);
+
+            Capsule::commit();
 
             return ResponseHandle::success($response, [], 'Invitation accepted successfully');
         } catch (Exception $e) {
+            Capsule::rollBack();
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
     }

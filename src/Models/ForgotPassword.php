@@ -12,7 +12,9 @@ class ForgotPassword extends Model
     public $incrementing = true;
     public $timestamps = true;
     protected $fillable = [
-        'email',
+        'recipient_email',
+        'domain',
+        'path',
         'reset_key',
         'is_used',
         'expires_at'
