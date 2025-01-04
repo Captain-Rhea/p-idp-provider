@@ -28,7 +28,7 @@ class MemberController
     {
         try {
             $queryParams = $request->getQueryParams();
-            $email = $queryParams['email'] ?? null;
+            $recipientEmail = $queryParams['recipient_email'] ?? null;
             $statusIds = $queryParams['status_id'] ?? null;
             $startDate = $queryParams['start_date'] ?? null;
             $endDate = $queryParams['end_date'] ?? null;
@@ -38,8 +38,8 @@ class MemberController
             $query = InviteMember::with(['inviter', 'status']);
 
             // Apply filters
-            if ($email) {
-                $query->where('email', 'LIKE', '%' . $email . '%');
+            if ($recipientEmail) {
+                $query->where('recipient_email', 'LIKE', '%' . $recipientEmail . '%');
             }
 
             if ($statusIds) {
@@ -61,8 +61,11 @@ class MemberController
             $formattedData = collect($invites->items())->map(function ($invite) {
                 return [
                     'id' => $invite->id,
-                    'email' => $invite->email,
+                    'recipient_email' => $invite->recipient_email,
+                    'domain' => $invite->domain,
+                    'path' => $invite->path,
                     'ref_code' => $invite->ref_code,
+                    'invite_link' => $invite->domain . '/' . $invite->path . '?ref_code=' . $invite->ref_code,
                     'status' => [
                         'id' => $invite->status->id,
                         'name' => $invite->status->name,
@@ -100,9 +103,8 @@ class MemberController
     {
         try {
             $body = json_decode((string)$request->getBody(), true);
-            $recipientEmail = $body['email'] ?? null;
+            $recipientEmail = $body['recipient_email'] ?? null;
             $roleId = $body['role_id'] ?? null;
-
             $inviter = $request->getAttribute('user');
 
             if (!$recipientEmail || !$roleId || !$inviter) {
@@ -114,7 +116,7 @@ class MemberController
                 return ResponseHandle::error($response, 'This email is already in use by another member.', 400);
             }
 
-            $invites = InviteMember::where('email', $recipientEmail)
+            $invites = InviteMember::where('recipient_email', $recipientEmail)
                 ->whereIn('status_id', [4, 5])
                 ->where('expires_at', '>', Carbon::now('Asia/Bangkok'))
                 ->get();
@@ -130,7 +132,9 @@ class MemberController
 
             $invite = InviteMember::create([
                 'inviter_id' => $inviter['user_id'],
-                'email' => $recipientEmail,
+                'recipient_email' => $recipientEmail,
+                'domain' => $_ENV['FRONT_URL'],
+                'path' => $_ENV['FRONT_INVITE_PATH'],
                 'role_id' => $roleId,
                 'status_id' => 4,
                 'ref_code' => $refCode,
