@@ -13,6 +13,7 @@ class MyMemberRoute extends BaseRoute
             $group->get('/profile', [MyMemberController::class, 'myProfile']);
             $group->put('/avatar', [MyMemberController::class, 'updateAvatar']);
             $group->put('/detail', [MyMemberController::class, 'updateUserDetail']);
+            $group->post('/reset-password', [MyMemberController::class, 'resetPassword']);
         })->add(new AuthMiddleware());
     }
 }

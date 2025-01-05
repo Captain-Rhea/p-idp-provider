@@ -188,4 +188,32 @@ class MyMemberController
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
     }
+
+    /**
+     * POST /v1/my-member/reset-password
+     */
+    public function resetPassword(Request $request, Response $response): Response
+    {
+        try {
+            $userRequest = $request->getAttribute('user');
+            $body = json_decode((string)$request->getBody(), true);
+            $newPassword = $body['new_password'] ?? null;
+
+            if (!$userRequest || !$newPassword) {
+                return ResponseHandle::error($response, 'User and New password are required', 400);
+            }
+
+            $user = User::where('user_id', $userRequest['user_id'])->first();
+            if (!$user) {
+                return ResponseHandle::error($response, 'User not found', 400);
+            }
+
+            $user->password = password_hash($newPassword, PASSWORD_DEFAULT);
+            $user->save();
+
+            return ResponseHandle::success($response, [], 'Password reset successfully');
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
 }

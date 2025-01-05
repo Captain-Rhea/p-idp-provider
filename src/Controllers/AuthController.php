@@ -144,11 +144,7 @@ class AuthController
                 return ResponseHandle::error($response, 'Invalid or expired token', 401);
             }
 
-            $decoded = TokenUtils::decodeToken($token);
-
-            return ResponseHandle::success($response, [
-                'payload' => 'test'
-            ], 'Token verified successfully');
+            return ResponseHandle::success($response, [], 'Token verified successfully');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
