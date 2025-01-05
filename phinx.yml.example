@@ -1,0 +1,23 @@
+paths:
+  migrations: ./db/migrations
+  seeds: ./db/seeds
+
+environments:
+  default_migration_table: phinxlog
+  default_environment: development
+  development:
+    adapter: mysql
+    host: 127.0.0.1
+    name: idp_db
+    user: root
+    pass: "password"
+    port: 3306
+    charset: utf8
+  production:
+    adapter: mysql
+    host: 127.0.0.1
+    name: idp_db
+    user: root
+    pass: "password"
+    port: 3306
+    charset: utf8mb4
