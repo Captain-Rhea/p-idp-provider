@@ -294,10 +294,24 @@ class AuthController
             }
 
             $frontendPath = $_ENV['FRONT_URL'] . "/" . $_ENV['FRONT_RESET_PATH'];
+            $companyLogo = $_ENV['EMAIL_COMPANY_LOGO'] ?? '';
+            $emailBaseColor = $_ENV['EMAIL_BASE_COLOR'] ?? '#0B99FF';
             $templateContent = file_get_contents($templatePath);
             $emailBody = str_replace(
-                ['{{frontend_path}}', '{{reset_key}}', '{{recipient_email}}'],
-                [$frontendPath, $resetKey, $recipientEmail],
+                [
+                    '{{frontend_path}}',
+                    '{{reset_key}}',
+                    '{{recipient_email}}',
+                    '{{company_logo}}',
+                    '{{base_color}}',
+                ],
+                [
+                    $frontendPath,
+                    $resetKey,
+                    $recipientEmail,
+                    $companyLogo,
+                    $emailBaseColor,
+                ],
                 $templateContent
             );
 

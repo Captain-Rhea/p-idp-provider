@@ -151,9 +151,27 @@ class MemberController
             $roleName = Role::where('id', $roleId)->value('name');
 
             $frontendPath = $_ENV['FRONT_URL'] . "/" . $_ENV['FRONT_INVITE_PATH'];
+            $companyLogo = $_ENV['EMAIL_COMPANY_LOGO'] ?? '';
+            $emailBaseColor = $_ENV['EMAIL_BASE_COLOR'] ?? '#0B99FF';
             $emailBody = str_replace(
-                ['{{frontend_path}}', '{{role_name}}', '{{ref_code}}', '{{recipient_email}}', '{{expires_at}}'],
-                [$frontendPath, $roleName, $refCode, $recipientEmail, $expiresAt],
+                [
+                    '{{frontend_path}}',
+                    '{{role_name}}',
+                    '{{ref_code}}',
+                    '{{recipient_email}}',
+                    '{{expires_at}}',
+                    '{{company_logo}}',
+                    '{{base_color}}',
+                ],
+                [
+                    $frontendPath,
+                    $roleName,
+                    $refCode,
+                    $recipientEmail,
+                    $expiresAt,
+                    $companyLogo,
+                    $emailBaseColor,
+                ],
                 $templateContent
             );
 
