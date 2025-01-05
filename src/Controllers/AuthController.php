@@ -293,8 +293,9 @@ class AuthController
                 throw new Exception('Email template not found');
             }
 
-            $frontendPath = $_ENV['FRONT_URL'] . "/" . $_ENV['FRONT_RESET_PATH'];
+            $companyName = $_ENV['EMAIL_COMPANY_NAME'] ?? 'Company Name';
             $companyLogo = $_ENV['EMAIL_COMPANY_LOGO'] ?? '';
+            $frontendPath = $_ENV['FRONT_URL'] . "/" . $_ENV['FRONT_RESET_PATH'];
             $emailBaseColor = $_ENV['EMAIL_BASE_COLOR'] ?? '#0B99FF';
             $templateContent = file_get_contents($templatePath);
             $emailBody = str_replace(
@@ -302,6 +303,7 @@ class AuthController
                     '{{frontend_path}}',
                     '{{reset_key}}',
                     '{{recipient_email}}',
+                    '{{company_name}}',
                     '{{company_logo}}',
                     '{{base_color}}',
                 ],
@@ -309,6 +311,7 @@ class AuthController
                     $frontendPath,
                     $resetKey,
                     $recipientEmail,
+                    $companyName,
                     $companyLogo,
                     $emailBaseColor,
                 ],
@@ -328,7 +331,7 @@ class AuthController
             $mailer->Port = (int)$_ENV['SMTP_PORT'];
 
             // Email Headers
-            $mailer->setFrom($_ENV['SMTP_USERNAME'], 'Medmetro Support');
+            $mailer->setFrom($_ENV['SMTP_USERNAME'], $_ENV['EMAIL_FROM_NAME'] ?? 'Support');
             $mailer->addAddress($recipientEmail);
 
             // Email Content

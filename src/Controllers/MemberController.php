@@ -150,6 +150,7 @@ class MemberController
             $templateContent = file_get_contents($templatePath);
             $roleName = Role::where('id', $roleId)->value('name');
 
+            $companyName = $_ENV['EMAIL_COMPANY_NAME'] ?? 'Company Name';
             $frontendPath = $_ENV['FRONT_URL'] . "/" . $_ENV['FRONT_INVITE_PATH'];
             $companyLogo = $_ENV['EMAIL_COMPANY_LOGO'] ?? '';
             $emailBaseColor = $_ENV['EMAIL_BASE_COLOR'] ?? '#0B99FF';
@@ -160,6 +161,7 @@ class MemberController
                     '{{ref_code}}',
                     '{{recipient_email}}',
                     '{{expires_at}}',
+                    '{{company_name}}',
                     '{{company_logo}}',
                     '{{base_color}}',
                 ],
@@ -169,6 +171,7 @@ class MemberController
                     $refCode,
                     $recipientEmail,
                     $expiresAt,
+                    $companyName,
                     $companyLogo,
                     $emailBaseColor,
                 ],
