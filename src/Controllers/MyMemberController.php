@@ -3,11 +3,13 @@
 namespace App\Controllers;
 
 use Exception;
-use GuzzleHttp\Client;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use App\Helpers\ResponseHandle;
 use App\Models\User;
+use App\Models\UserInfo;
+use App\Models\UserInfoTranslation;
+use App\Models\UserRole;
 
 class MyMemberController
 {
@@ -113,6 +115,75 @@ class MyMemberController
                 'avatar_base_url' => $avatarBaseUrl,
                 'avatar_lazy_url' => $avatarLazyUrl,
             ], 'Avatar uploaded successfully');
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * PUT /v1/my-member/detail
+     */
+    public function updateUserDetail(Request $request, Response $response): Response
+    {
+        try {
+            $user = $request->getAttribute('user');
+
+            if (!$user) {
+                return ResponseHandle::error($response, 'User is required', 400);
+            }
+
+            $body = json_decode((string)$request->getBody(), true);
+            if (!is_array($body)) {
+                return ResponseHandle::error($response, 'Invalid request body', 400);
+            }
+
+            $userId = $user['user_id'];
+
+            if (isset($body['phone'])) {
+                $userInfo = UserInfo::where('user_id', $userId)->first();
+                if (!$userInfo) {
+                    return ResponseHandle::error($response, 'UserInfo not found for this user', 404);
+                }
+                $userInfo->phone = $body['phone'];
+                $userInfo->save();
+            }
+
+            if (isset($body['first_name_th']) || isset($body['last_name_th']) || isset($body['nickname_th'])) {
+                $translationTh = UserInfoTranslation::where('user_id', $userId)
+                    ->where('language_code', 'th')
+                    ->first();
+                if (!$translationTh) {
+                    return ResponseHandle::error($response, 'Translation (TH) not found for this user', 404);
+                }
+                $translationTh->first_name = $body['first_name_th'] ?? $translationTh->first_name;
+                $translationTh->last_name = $body['last_name_th'] ?? $translationTh->last_name;
+                $translationTh->nickname = $body['nickname_th'] ?? $translationTh->nickname;
+                $translationTh->save();
+            }
+
+            if (isset($body['first_name_en']) || isset($body['last_name_en']) || isset($body['nickname_en'])) {
+                $translationEn = UserInfoTranslation::where('user_id', $userId)
+                    ->where('language_code', 'en')
+                    ->first();
+                if (!$translationEn) {
+                    return ResponseHandle::error($response, 'Translation (EN) not found for this user', 404);
+                }
+                $translationEn->first_name = $body['first_name_en'] ?? $translationEn->first_name;
+                $translationEn->last_name = $body['last_name_en'] ?? $translationEn->last_name;
+                $translationEn->nickname = $body['nickname_en'] ?? $translationEn->nickname;
+                $translationEn->save();
+            }
+
+            if (isset($body['role_id'])) {
+                $userRole = UserRole::where('user_id', $userId)->first();
+                if (!$userRole) {
+                    return ResponseHandle::error($response, 'UserRole not found for this user', 404);
+                }
+                $userRole->role_id = $body['role_id'];
+                $userRole->save();
+            }
+
+            return ResponseHandle::success($response, [], 'User detail updated successfully');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }

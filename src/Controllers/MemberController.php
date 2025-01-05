@@ -467,8 +467,9 @@ class MemberController
                     ],
                     'user_info' => $userModel->userInfo ? [
                         'phone' => $userModel->userInfo->phone,
-                        'avatar_id' => $userModel->userInfo->avatar_id,
-                        'avatar_url' => $userModel->userInfo->avatar_url,
+                        'avatar_id' => $userModel->avatar_id,
+                        'avatar_base_url' => $userModel->avatar_base_url,
+                        'avatar_lazy_url' => $userModel->avatar_lazy_url,
                     ] : null,
                     'user_info_translation' => $userModel->userInfoTranslation->map(function ($translation) {
                         return [
