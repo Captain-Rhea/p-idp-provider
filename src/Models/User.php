@@ -15,7 +15,8 @@ class User extends Model
         'password',
         'status_id',
         'avatar_id',
-        'avatar_url'
+        'avatar_base_url',
+        'avatar_lazy_url',
     ];
 
     public function status()

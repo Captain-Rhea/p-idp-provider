@@ -23,6 +23,7 @@
     "firebase/php-jwt": "^6.10",
     "phpmailer/phpmailer": "^6.9",
     "illuminate/events": "^11.36",
-    "illuminate/support": "^11.37"
+    "illuminate/support": "^11.37",
+    "guzzlehttp/guzzle": "^7.9"
   }
 }

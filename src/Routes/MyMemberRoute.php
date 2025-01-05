@@ -11,6 +11,7 @@ class MyMemberRoute extends BaseRoute
     {
         $this->app->group('/v1/my-member', function ($group) {
             $group->get('/profile', [MyMemberController::class, 'myProfile']);
+            $group->put('/avatar', [MyMemberController::class, 'updateAvatar']);
         })->add(new AuthMiddleware());
     }
 }
