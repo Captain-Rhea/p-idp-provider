@@ -33,15 +33,17 @@ class AuthController
 
             $user = User::where('email', $email)->first();
 
-            if (!$user || !password_verify($password, $user->password)) {
+            if (!$user) {
+                return ResponseHandle::error($response, 'Invalid email or password', 401);
+            }
 
+            if (!password_verify($password, $user->password)) {
                 LoginTransactionHandle::logTransaction(
                     $user->user_id,
                     'failed',
                     $request->getServerParams()['REMOTE_ADDR'],
                     $request->getHeaderLine('User-Agent')
                 );
-
                 return ResponseHandle::error($response, 'Invalid email or password', 401);
             }
 
