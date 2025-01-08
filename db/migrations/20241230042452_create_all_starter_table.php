@@ -125,5 +125,14 @@ final class CreateAllStarterTable extends AbstractMigration
             ->addColumn('updated_at', 'timestamp', ['null' => true])
             ->addIndex(['recipient_email', 'reset_key'], ['unique' => true])
             ->create();
+
+        // สร้างตาราง api_connection
+        $table = $this->table('api_connection', ['id' => 'id']);
+        $table->addColumn('connection_name', 'string', ['limit' => 255, 'null' => false])
+            ->addColumn('connection_key', 'string', ['limit' => 255, 'null' => false])
+            ->addColumn('created_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP', 'null' => false])
+            ->addColumn('updated_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP', 'update' => 'CURRENT_TIMESTAMP', 'null' => false])
+            ->addIndex(['connection_key'], ['unique' => true, 'name' => 'idx_connection_key'])
+            ->create();
     }
 }

@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "start": "php -S localhost:3002 -t public",
+    "start": "php -S localhost:4200 -t public",
     "db-create": "vendor/bin/phinx create",
     "db-migrate": "vendor/bin/phinx migrate",
     "db-rollback": "vendor/bin/phinx rollback",
