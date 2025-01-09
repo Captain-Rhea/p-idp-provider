@@ -11,7 +11,8 @@ class AuthRoute extends BaseRoute
     {
         $this->app->group('/v1/auth', function ($group) {
             $group->post('/login', [AuthController::class, 'login']);
-            $group->post('/is-login', [AuthController::class, 'isLogin']);
+            $group->get('/is-login', [AuthController::class, 'isLogin']);
+            $group->get('/verify-token', [AuthController::class, 'verifyToken']);
             // Reset password
             $group->post('/reset-password', [AuthController::class, 'resetPassword']);
             $group->get('/forgot-password', [AuthController::class, 'getForgotPasswords']);

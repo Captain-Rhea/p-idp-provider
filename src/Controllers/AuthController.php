@@ -76,7 +76,7 @@ class AuthController
     }
 
     /**
-     * POST /v1/auth/is-login
+     * GET /v1/auth/is-login
      */
     public function isLogin(Request $request, Response $response): Response
     {
@@ -121,21 +121,17 @@ class AuthController
     }
 
     /**
-     * POST /v1/auth/reset-password
+     * GET /v1/auth/verify-token
      */
-    public function resetPassword(Request $request, Response $response): Response
+    public function verifyToken(Request $request, Response $response): Response
     {
         try {
             $queryParams = $request->getQueryParams();
             $token = $queryParams['token'] ?? '';
+
             $user = JWTHelper::getUser($token);
             if (!$user) {
                 return ResponseHandle::error($response, 'Unauthorized', 401);
-            }
-
-            $roles = $user->roles()->pluck('role_id')->toArray();
-            if ($roles[0] !== 1) {
-                return ResponseHandle::error($response, 'Forbidden: You do not have permission to modify this resource', 403);
             }
 
             $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
@@ -143,6 +139,20 @@ class AuthController
                 return $statusCheckResponse;
             }
 
+            $tokenDecode = TokenJWTUtils::decodeToken($token);
+
+            return ResponseHandle::success($response, $tokenDecode, 'Verify successful');
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * POST /v1/auth/reset-password
+     */
+    public function resetPassword(Request $request, Response $response): Response
+    {
+        try {
             $body = json_decode((string)$request->getBody(), true);
             $userId = $body['user_id'] ?? null;
             $newPassword = $body['new_password'] ?? null;
@@ -172,17 +182,6 @@ class AuthController
     {
         try {
             $queryParams = $request->getQueryParams();
-            $token = $queryParams['token'] ?? '';
-            $user = JWTHelper::getUser($token);
-            if (!$user) {
-                return ResponseHandle::error($response, 'Unauthorized', 401);
-            }
-
-            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
-            if ($statusCheckResponse) {
-                return $statusCheckResponse;
-            }
-
             $page = $queryParams['page'] ?? 1;
             $perPage = $queryParams['per_page'] ?? 10;
             $recipientEmail = $queryParams['recipient_email'] ?? null;

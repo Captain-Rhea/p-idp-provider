@@ -8,6 +8,7 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
+use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Support\Carbon;
 use App\Models\InviteMember;
 use App\Helpers\ResponseHandle;
@@ -19,7 +20,6 @@ use App\Models\UserInfo;
 use App\Models\UserInfoTranslation;
 use App\Models\UserPermission;
 use App\Models\UserRole;
-use Illuminate\Database\Capsule\Manager as Capsule;
 
 class MemberController
 {
@@ -30,17 +30,6 @@ class MemberController
     {
         try {
             $queryParams = $request->getQueryParams();
-            $token = $queryParams['token'] ?? '';
-            $user = JWTHelper::getUser($token);
-            if (!$user) {
-                return ResponseHandle::error($response, 'Unauthorized', 401);
-            }
-
-            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
-            if ($statusCheckResponse) {
-                return $statusCheckResponse;
-            }
-
             $recipientEmail = $queryParams['recipient_email'] ?? null;
             $statusIds = $queryParams['status_id'] ?? null;
             $startDate = $queryParams['start_date'] ?? null;
@@ -116,22 +105,10 @@ class MemberController
     public function createInvitation(Request $request, Response $response): Response
     {
         try {
-            $queryParams = $request->getQueryParams();
-            $token = $queryParams['token'] ?? '';
-            $user = JWTHelper::getUser($token);
-            if (!$user) {
-                return ResponseHandle::error($response, 'Unauthorized', 401);
-            }
-
-            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
-            if ($statusCheckResponse) {
-                return $statusCheckResponse;
-            }
-
             $body = json_decode((string)$request->getBody(), true);
+            $inviter = $body['inviter'] ?? null;
             $recipientEmail = $body['recipient_email'] ?? null;
             $roleId = $body['role_id'] ?? null;
-            $inviter = $user;
 
             if (!$recipientEmail || !$roleId || !$inviter) {
                 return ResponseHandle::error($response, 'Recipient Email, Role ID, and Inviter ID are required', 400);
@@ -246,18 +223,6 @@ class MemberController
     public function rejectInvitation(Request $request, Response $response, $args): Response
     {
         try {
-            $queryParams = $request->getQueryParams();
-            $token = $queryParams['token'] ?? '';
-            $user = JWTHelper::getUser($token);
-            if (!$user) {
-                return ResponseHandle::error($response, 'Unauthorized', 401);
-            }
-
-            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
-            if ($statusCheckResponse) {
-                return $statusCheckResponse;
-            }
-
             $inviteId = $args['id'] ?? null;
 
             if (!$inviteId) {
@@ -287,18 +252,6 @@ class MemberController
     public function verifyInvitation(Request $request, Response $response): Response
     {
         try {
-            $queryParams = $request->getQueryParams();
-            $token = $queryParams['token'] ?? '';
-            $user = JWTHelper::getUser($token);
-            if (!$user) {
-                return ResponseHandle::error($response, 'Unauthorized', 401);
-            }
-
-            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
-            if ($statusCheckResponse) {
-                return $statusCheckResponse;
-            }
-
             $body = json_decode((string)$request->getBody(), true);
             $refCode = $body['ref_code'] ?? null;
 
@@ -336,18 +289,6 @@ class MemberController
     public function acceptInvitation(Request $request, Response $response): Response
     {
         try {
-            $queryParams = $request->getQueryParams();
-            $token = $queryParams['token'] ?? '';
-            $user = JWTHelper::getUser($token);
-            if (!$user) {
-                return ResponseHandle::error($response, 'Unauthorized', 401);
-            }
-
-            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
-            if ($statusCheckResponse) {
-                return $statusCheckResponse;
-            }
-
             $body = json_decode((string)$request->getBody(), true);
             $refCode = $body['ref_code'] ?? null;
             $recipientEmail = $body['recipient_email'] ?? null;
@@ -458,18 +399,6 @@ class MemberController
     public function getMembers(Request $request, Response $response): Response
     {
         try {
-            $queryParams = $request->getQueryParams();
-            $token = $queryParams['token'] ?? '';
-            $user = JWTHelper::getUser($token);
-            if (!$user) {
-                return ResponseHandle::error($response, 'Unauthorized', 401);
-            }
-
-            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
-            if ($statusCheckResponse) {
-                return $statusCheckResponse;
-            }
-
             $userId = $queryParams['user_id'] ?? null;
             $statusIds = $queryParams['status_id'] ?? null;
             $email = $queryParams['email'] ?? null;
@@ -601,23 +530,6 @@ class MemberController
     public function createMember(Request $request, Response $response): Response
     {
         try {
-            $queryParams = $request->getQueryParams();
-            $token = $queryParams['token'] ?? '';
-            $user = JWTHelper::getUser($token);
-            if (!$user) {
-                return ResponseHandle::error($response, 'Unauthorized', 401);
-            }
-
-            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
-            if ($statusCheckResponse) {
-                return $statusCheckResponse;
-            }
-
-            $roles = $user->roles()->pluck('role_id')->toArray();
-            if ($roles[0] !== 1) {
-                return ResponseHandle::error($response, 'Forbidden: You do not have permission to modify this resource', 403);
-            }
-
             $body = json_decode((string)$request->getBody(), true);
             $email = $body['email'] ?? null;
             $password = $body['password'] ?? null;
@@ -714,18 +626,6 @@ class MemberController
     public function permanentlyDeleteMember(Request $request, Response $response, $args): Response
     {
         try {
-            $queryParams = $request->getQueryParams();
-            $token = $queryParams['token'] ?? '';
-            $user = JWTHelper::getUser($token);
-            if (!$user) {
-                return ResponseHandle::error($response, 'Unauthorized', 401);
-            }
-
-            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
-            if ($statusCheckResponse) {
-                return $statusCheckResponse;
-            }
-
             $userId = $args['id'] ?? null;
 
             if (!$userId) {
@@ -752,18 +652,6 @@ class MemberController
     public function softDeleteMember(Request $request, Response $response, $args): Response
     {
         try {
-            $queryParams = $request->getQueryParams();
-            $token = $queryParams['token'] ?? '';
-            $user = JWTHelper::getUser($token);
-            if (!$user) {
-                return ResponseHandle::error($response, 'Unauthorized', 401);
-            }
-
-            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
-            if ($statusCheckResponse) {
-                return $statusCheckResponse;
-            }
-
             $userId = $args['id'] ?? null;
 
             if (!$userId) {
@@ -791,18 +679,6 @@ class MemberController
     public function suspendMember(Request $request, Response $response, $args): Response
     {
         try {
-            $queryParams = $request->getQueryParams();
-            $token = $queryParams['token'] ?? '';
-            $user = JWTHelper::getUser($token);
-            if (!$user) {
-                return ResponseHandle::error($response, 'Unauthorized', 401);
-            }
-
-            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
-            if ($statusCheckResponse) {
-                return $statusCheckResponse;
-            }
-
             $userId = $args['id'] ?? null;
 
             if (!$userId) {
@@ -830,18 +706,6 @@ class MemberController
     public function activeMember(Request $request, Response $response, $args): Response
     {
         try {
-            $queryParams = $request->getQueryParams();
-            $token = $queryParams['token'] ?? '';
-            $user = JWTHelper::getUser($token);
-            if (!$user) {
-                return ResponseHandle::error($response, 'Unauthorized', 401);
-            }
-
-            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
-            if ($statusCheckResponse) {
-                return $statusCheckResponse;
-            }
-
             $userId = $args['id'] ?? null;
 
             if (!$userId) {
@@ -869,18 +733,6 @@ class MemberController
     public function changeRoleMember(Request $request, Response $response, $args): Response
     {
         try {
-            $queryParams = $request->getQueryParams();
-            $token = $queryParams['token'] ?? '';
-            $user = JWTHelper::getUser($token);
-            if (!$user) {
-                return ResponseHandle::error($response, 'Unauthorized', 401);
-            }
-
-            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
-            if ($statusCheckResponse) {
-                return $statusCheckResponse;
-            }
-
             $userId = $args['user_id'] ?? null;
 
             if (!$userId) {

@@ -22,16 +22,10 @@ class MyMemberController
     {
         try {
             $queryParams = $request->getQueryParams();
-            $token = $queryParams['token'] ?? '';
+            $userId = $queryParams['user_id'] ?? null;
 
-            $user = JWTHelper::getUser($token);
-            if (!$user) {
-                return ResponseHandle::error($response, 'Unauthorized', 401);
-            }
-
-            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
-            if ($statusCheckResponse) {
-                return $statusCheckResponse;
+            if (!$userId) {
+                return ResponseHandle::error($response, 'User ID is required', 400);
             }
 
             $userModel = User::with([
@@ -40,7 +34,7 @@ class MyMemberController
                 'userInfoTranslation',
                 'roles',
                 'permissions'
-            ])->find($user['user_id']);
+            ])->find($userId);
 
             if (!$userModel) {
                 return ResponseHandle::error($response, 'User not found', 404);
@@ -98,28 +92,16 @@ class MyMemberController
     {
         try {
             $queryParams = $request->getQueryParams();
-            $token = $queryParams['token'] ?? '';
-
-            $user = JWTHelper::getUser($token);
-            if (!$user) {
-                return ResponseHandle::error($response, 'Unauthorized', 401);
-            }
-
-            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
-            if ($statusCheckResponse) {
-                return $statusCheckResponse;
-            }
+            $userId = $queryParams['user_id'] ?? null;
 
             $body = json_decode((string)$request->getBody(), true);
             $avatarId = $body['avatar_id'] ?? null;
             $avatarBaseUrl = $body['avatar_base_url'] ?? null;
             $avatarLazyUrl = $body['avatar_lazy_url'] ?? null;
 
-            if (!$user || !$avatarId || !$avatarBaseUrl || !$avatarLazyUrl) {
+            if (!$userId || !$avatarId || !$avatarBaseUrl || !$avatarLazyUrl) {
                 return ResponseHandle::error($response, 'All required fields must be provided', 400);
             }
-
-            $userId = $user['user_id'];
 
             $user = User::where('user_id', $userId)->first();
             if (!$user) {
@@ -147,24 +129,12 @@ class MyMemberController
     {
         try {
             $queryParams = $request->getQueryParams();
-            $token = $queryParams['token'] ?? '';
-
-            $user = JWTHelper::getUser($token);
-            if (!$user) {
-                return ResponseHandle::error($response, 'Unauthorized', 401);
-            }
-
-            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
-            if ($statusCheckResponse) {
-                return $statusCheckResponse;
-            }
+            $userId = $queryParams['user_id'] ?? null;
 
             $body = json_decode((string)$request->getBody(), true);
             if (!is_array($body)) {
                 return ResponseHandle::error($response, 'Invalid request body', 400);
             }
-
-            $userId = $user['user_id'];
 
             if (isset($body['phone'])) {
                 $userInfo = UserInfo::where('user_id', $userId)->first();
@@ -223,17 +193,7 @@ class MyMemberController
     {
         try {
             $queryParams = $request->getQueryParams();
-            $token = $queryParams['token'] ?? '';
-
-            $user = JWTHelper::getUser($token);
-            if (!$user) {
-                return ResponseHandle::error($response, 'Unauthorized', 401);
-            }
-
-            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
-            if ($statusCheckResponse) {
-                return $statusCheckResponse;
-            }
+            $userId = $queryParams['user_id'] ?? null;
 
             $body = json_decode((string)$request->getBody(), true);
             $newPassword = $body['new_password'] ?? null;
@@ -242,7 +202,7 @@ class MyMemberController
                 return ResponseHandle::error($response, 'User and New password are required', 400);
             }
 
-            $user = User::where('user_id', $user['user_id'])->first();
+            $user = User::where('user_id', $userId)->first();
             $user->password = password_hash($newPassword, PASSWORD_DEFAULT);
             $user->save();
 
