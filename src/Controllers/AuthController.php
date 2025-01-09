@@ -185,7 +185,7 @@ class AuthController
             $page = $queryParams['page'] ?? 1;
             $perPage = $queryParams['per_page'] ?? 10;
             $recipientEmail = $queryParams['recipient_email'] ?? null;
-            $isUseds = $queryParams['is_used'] ?? null;
+            $isUsed = $queryParams['is_used'] ?? null;
             $startDate = $queryParams['start_date'] ?? null;
             $endDate = $queryParams['end_date'] ?? null;
 
@@ -196,9 +196,8 @@ class AuthController
                 $query->where('recipient_email', 'LIKE', '%' . $recipientEmail . '%');
             }
 
-            if ($isUseds) {
-                $isUseds = is_array($isUseds) ? $isUseds : explode(',', $isUseds);
-                $query->whereIn('is_used', $isUseds);
+            if ($isUsed) {
+                $query->where('is_used', $isUsed);
             }
 
             if ($startDate && $endDate) {
