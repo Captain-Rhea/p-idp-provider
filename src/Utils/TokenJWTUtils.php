@@ -4,8 +4,9 @@ namespace App\Utils;
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use Illuminate\Support\Carbon;
 
-class TokenUtils
+class TokenJWTUtils
 {
     /**
      * สร้าง JWT Token
@@ -14,15 +15,12 @@ class TokenUtils
      * @param int $expiresIn ระยะเวลาหมดอายุ (วินาที)
      * @return string Token ที่ถูกเข้ารหัส
      */
-    public static function generateToken(array $payload, ?int $expiresIn = null): string
+    public static function generateToken(array $payload, int $expiresIn = 3600): string
     {
-        $key = $_ENV['CONNECTION_KEY'];
-        $issuedAt = time();
+        $key = $_ENV['JWT_SECRET'];
+        $issuedAt = Carbon::now('Asia/Bangkok')->timestamp;
         $payload['iat'] = $issuedAt;
-
-        if ($expiresIn !== null) {
-            $payload['exp'] = $issuedAt + $expiresIn;
-        }
+        $payload['exp'] = $issuedAt + $expiresIn;
 
         return JWT::encode($payload, $key, 'HS256');
     }
@@ -36,7 +34,7 @@ class TokenUtils
      */
     public static function decodeToken(string $token): array
     {
-        $key = $_ENV['CONNECTION_KEY'];
+        $key = $_ENV['JWT_SECRET'];
         return (array) JWT::decode($token, new Key($key, 'HS256'));
     }
 

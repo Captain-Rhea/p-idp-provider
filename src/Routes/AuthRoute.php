@@ -11,14 +11,13 @@ class AuthRoute extends BaseRoute
     {
         $this->app->group('/v1/auth', function ($group) {
             $group->post('/login', [AuthController::class, 'login']);
-            $group->post('/is-login', [AuthController::class, 'isLogin'])->add(new AuthMiddleware());
-            $group->post('/verify-token', [AuthController::class, 'verifyToken']);
+            $group->post('/is-login', [AuthController::class, 'isLogin']);
             // Reset password
-            $group->post('/reset-password', [AuthController::class, 'resetPassword'])->add(new AuthMiddleware());
-            $group->get('/forgot-password', [AuthController::class, 'getForgotPasswords'])->add(new AuthMiddleware());
+            $group->post('/reset-password', [AuthController::class, 'resetPassword']);
+            $group->get('/forgot-password', [AuthController::class, 'getForgotPasswords']);
             $group->post('/send/forgot-mail', [AuthController::class, 'sendForgotMail']);
             $group->post('/send/forgot-mail/verify', [AuthController::class, 'forgotMailVerify']);
             $group->post('/send/forgot-mail/reset-password', [AuthController::class, 'forgotMailResetNewPassword']);
-        });
+        })->add(new AuthMiddleware());
     }
 }

@@ -3,9 +3,11 @@
 namespace App\Controllers;
 
 use Exception;
+use App\Helpers\JWTHelper;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use App\Helpers\ResponseHandle;
+use App\Helpers\VerifyUserStatus;
 use App\Models\User;
 use App\Models\UserInfo;
 use App\Models\UserInfoTranslation;
@@ -19,10 +21,17 @@ class MyMemberController
     public function myProfile(Request $request, Response $response): Response
     {
         try {
-            $user = $request->getAttribute('user');
+            $queryParams = $request->getQueryParams();
+            $token = $queryParams['token'] ?? '';
 
+            $user = JWTHelper::getUser($token);
             if (!$user) {
                 return ResponseHandle::error($response, 'Unauthorized', 401);
+            }
+
+            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
+            if ($statusCheckResponse) {
+                return $statusCheckResponse;
             }
 
             $userModel = User::with([
@@ -88,7 +97,18 @@ class MyMemberController
     public function updateAvatar(Request $request, Response $response): Response
     {
         try {
-            $user = $request->getAttribute('user');
+            $queryParams = $request->getQueryParams();
+            $token = $queryParams['token'] ?? '';
+
+            $user = JWTHelper::getUser($token);
+            if (!$user) {
+                return ResponseHandle::error($response, 'Unauthorized', 401);
+            }
+
+            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
+            if ($statusCheckResponse) {
+                return $statusCheckResponse;
+            }
 
             $body = json_decode((string)$request->getBody(), true);
             $avatarId = $body['avatar_id'] ?? null;
@@ -126,10 +146,17 @@ class MyMemberController
     public function updateUserDetail(Request $request, Response $response): Response
     {
         try {
-            $user = $request->getAttribute('user');
+            $queryParams = $request->getQueryParams();
+            $token = $queryParams['token'] ?? '';
 
+            $user = JWTHelper::getUser($token);
             if (!$user) {
-                return ResponseHandle::error($response, 'User is required', 400);
+                return ResponseHandle::error($response, 'Unauthorized', 401);
+            }
+
+            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
+            if ($statusCheckResponse) {
+                return $statusCheckResponse;
             }
 
             $body = json_decode((string)$request->getBody(), true);
@@ -195,19 +222,27 @@ class MyMemberController
     public function resetPassword(Request $request, Response $response): Response
     {
         try {
-            $userRequest = $request->getAttribute('user');
+            $queryParams = $request->getQueryParams();
+            $token = $queryParams['token'] ?? '';
+
+            $user = JWTHelper::getUser($token);
+            if (!$user) {
+                return ResponseHandle::error($response, 'Unauthorized', 401);
+            }
+
+            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
+            if ($statusCheckResponse) {
+                return $statusCheckResponse;
+            }
+
             $body = json_decode((string)$request->getBody(), true);
             $newPassword = $body['new_password'] ?? null;
 
-            if (!$userRequest || !$newPassword) {
+            if (!$newPassword) {
                 return ResponseHandle::error($response, 'User and New password are required', 400);
             }
 
-            $user = User::where('user_id', $userRequest['user_id'])->first();
-            if (!$user) {
-                return ResponseHandle::error($response, 'User not found', 400);
-            }
-
+            $user = User::where('user_id', $user['user_id'])->first();
             $user->password = password_hash($newPassword, PASSWORD_DEFAULT);
             $user->save();
 

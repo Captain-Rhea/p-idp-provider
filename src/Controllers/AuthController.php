@@ -3,14 +3,15 @@
 namespace App\Controllers;
 
 use Exception;
+use App\Helpers\JWTHelper;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use App\Helpers\ResponseHandle;
 use App\Helpers\VerifyUserStatus;
 use App\Models\User;
-use App\Utils\TokenUtils;
 use App\Helpers\LoginTransactionHandle;
 use App\Models\ForgotPassword;
+use App\Utils\TokenJWTUtils;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
 use Illuminate\Support\Carbon;
@@ -34,7 +35,7 @@ class AuthController
             $user = User::where('email', $email)->first();
 
             if (!$user) {
-                return ResponseHandle::error($response, 'Invalid email or password', 401);
+                return ResponseHandle::error($response, 'Invalid email or password', 404);
             }
 
             if (!password_verify($password, $user->password)) {
@@ -44,7 +45,7 @@ class AuthController
                     $request->getServerParams()['REMOTE_ADDR'],
                     $request->getHeaderLine('User-Agent')
                 );
-                return ResponseHandle::error($response, 'Invalid email or password', 401);
+                return ResponseHandle::error($response, 'Invalid email or password', 404);
             }
 
             $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
@@ -52,15 +53,14 @@ class AuthController
                 return $statusCheckResponse;
             }
 
-            $roles = $user->roles()->pluck('name')->toArray();
+            $roles = $user->roles()->pluck('role_id')->toArray();
 
-            $token = TokenUtils::generateToken([
+            $tokenExp = 60 * 60 * 24 * 7;
+            $token = TokenJWTUtils::generateToken([
                 'user_id' => $user->user_id,
                 'email' => $user->email,
-                'first_name' => $user->first_name,
-                'last_name' => $user->last_name,
-                'role' => $roles
-            ], 60 * 60 * 48);
+                'role' => $roles[0]
+            ], $tokenExp);
 
             LoginTransactionHandle::logTransaction(
                 $user->user_id,
@@ -81,23 +81,12 @@ class AuthController
     public function isLogin(Request $request, Response $response): Response
     {
         try {
-            $getUser = $request->getAttribute('user');
+            $queryParams = $request->getQueryParams();
+            $token = $queryParams['token'] ?? '';
 
-            if (!$getUser) {
-                return ResponseHandle::error($response, 'Unauthorized', 401);
-            }
-
-            $user = User::where('user_id', $getUser['user_id'])->first();
-
+            $user = JWTHelper::getUser($token);
             if (!$user) {
-                LoginTransactionHandle::logTransaction(
-                    $getUser->user_id ?? 'unknown',
-                    'failed',
-                    $request->getServerParams()['REMOTE_ADDR'],
-                    $request->getHeaderLine('User-Agent')
-                );
-
-                return ResponseHandle::error($response, 'User not found', 404);
+                return ResponseHandle::error($response, 'Unauthorized', 401);
             }
 
             $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
@@ -105,48 +94,27 @@ class AuthController
                 return $statusCheckResponse;
             }
 
-            $roles = $user->roles()->pluck('name')->toArray();
+            $tokenDecode = TokenJWTUtils::decodeToken($token);
+            $expirationTime = Carbon::createFromTimestamp($tokenDecode['exp']);
+            if (Carbon::now()->diffInDays($expirationTime, false) <= 2) {
+                $tokenExp = 60 * 60 * 24 * 7;
+                $newToken = TokenJWTUtils::generateToken([
+                    'user_id' => $tokenDecode['user_id'],
+                    'email' => $tokenDecode['email'],
+                    'role' => $tokenDecode['role']
+                ], $tokenExp);
 
-            $token = TokenUtils::generateToken([
-                'user_id' => $user->user_id,
-                'email' => $user->email,
-                'first_name' => $user->first_name,
-                'last_name' => $user->last_name,
-                'role' => $roles
-            ], 60 * 60 * 48);
+                LoginTransactionHandle::logTransaction(
+                    $user->user_id,
+                    'success',
+                    $request->getServerParams()['REMOTE_ADDR'],
+                    $request->getHeaderLine('User-Agent')
+                );
 
-            LoginTransactionHandle::logTransaction(
-                $user->user_id,
-                'success',
-                $request->getServerParams()['REMOTE_ADDR'],
-                $request->getHeaderLine('User-Agent')
-            );
+                return ResponseHandle::success($response, ['token' => $newToken], 'Login successful');
+            }
 
             return ResponseHandle::success($response, ['token' => $token], 'Login successful');
-        } catch (Exception $e) {
-            return ResponseHandle::error($response, $e->getMessage(), 500);
-        }
-    }
-
-    /**
-     * POST /v1/auth/verify-token
-     */
-    public function verifyToken(Request $request, Response $response): Response
-    {
-        try {
-            $body = json_decode((string)$request->getBody(), true);
-            $token = $body['token'] ?? null;
-
-            if (!$token) {
-                return ResponseHandle::error($response, 'Token is required', 400);
-            }
-
-            $isValidToken = TokenUtils::isValidToken($token);
-            if (!$isValidToken) {
-                return ResponseHandle::error($response, 'Invalid or expired token', 401);
-            }
-
-            return ResponseHandle::success($response, [], 'Token verified successfully');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
@@ -158,15 +126,32 @@ class AuthController
     public function resetPassword(Request $request, Response $response): Response
     {
         try {
-            $body = json_decode((string)$request->getBody(), true);
-            $email = $body['email'] ?? null;
-            $newPassword = $body['new_password'] ?? null;
-
-            if (!$email || !$newPassword) {
-                return ResponseHandle::error($response, 'Email and new password are required', 400);
+            $queryParams = $request->getQueryParams();
+            $token = $queryParams['token'] ?? '';
+            $user = JWTHelper::getUser($token);
+            if (!$user) {
+                return ResponseHandle::error($response, 'Unauthorized', 401);
             }
 
-            $user = User::whereRaw('LOWER(email) = ?', [strtolower($email)])->first();
+            $roles = $user->roles()->pluck('role_id')->toArray();
+            if ($roles[0] !== 1) {
+                return ResponseHandle::error($response, 'Forbidden: You do not have permission to modify this resource', 403);
+            }
+
+            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
+            if ($statusCheckResponse) {
+                return $statusCheckResponse;
+            }
+
+            $body = json_decode((string)$request->getBody(), true);
+            $userId = $body['user_id'] ?? null;
+            $newPassword = $body['new_password'] ?? null;
+
+            if (!$userId || !$newPassword) {
+                return ResponseHandle::error($response, 'User ID and new password are required', 400);
+            }
+
+            $user = User::where('user_id', $userId)->first();
             if (!$user) {
                 return ResponseHandle::error($response, 'User not found', 404);
             }
@@ -174,7 +159,7 @@ class AuthController
             $user->password = password_hash($newPassword, PASSWORD_DEFAULT);
             $user->save();
 
-            return ResponseHandle::success($response, [], 'Password reset successfully');
+            return ResponseHandle::success($response, null, 'Password reset successfully');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
@@ -187,6 +172,17 @@ class AuthController
     {
         try {
             $queryParams = $request->getQueryParams();
+            $token = $queryParams['token'] ?? '';
+            $user = JWTHelper::getUser($token);
+            if (!$user) {
+                return ResponseHandle::error($response, 'Unauthorized', 401);
+            }
+
+            $statusCheckResponse = VerifyUserStatus::check($user->status_id, $response);
+            if ($statusCheckResponse) {
+                return $statusCheckResponse;
+            }
+
             $page = $queryParams['page'] ?? 1;
             $perPage = $queryParams['per_page'] ?? 10;
             $recipientEmail = $queryParams['recipient_email'] ?? null;

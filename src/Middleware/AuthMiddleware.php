@@ -2,8 +2,7 @@
 
 namespace App\Middleware;
 
-use App\Helpers\VerifyUserStatus;
-use App\Models\User;
+use App\Models\ApiConnectionModel;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\MiddlewareInterface;
@@ -16,29 +15,21 @@ class AuthMiddleware implements MiddlewareInterface
     {
         $authHeader = $request->getHeaderLine('Authorization');
 
-        $isGuardEnabled = filter_var($_ENV['API_GUARD'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        if (!$isGuardEnabled) {
-            return $handler->handle($request);
-        }
-
         if (empty($authHeader)) {
             return $this->unauthorizedResponse('Authorization header missing');
         }
 
         $token = str_replace('Bearer ', '', $authHeader);
+        $token = explode('.', $token);
+        $connectionName = $token[0];
+        $secretKey = $token[1];
+        $existingConnection = ApiConnectionModel::where('connection_name', $connectionName)->first();
+        $token = $existingConnection->connection_key . '.' . $secretKey;
 
         try {
             $decoded = TokenUtils::decodeToken($token);
-            $request = $request->withAttribute('user', (array) $decoded);
-
-            $user = $request->getAttribute('user');
-            $userStatus = User::where('user_id', $user['user_id'])->first();
-
-            $statusCheckResponse = VerifyUserStatus::check($userStatus['status_id'], new \Slim\Psr7\Response());
-            if ($statusCheckResponse) {
-                return $statusCheckResponse;
-            }
-
+            $request = $request->withAttribute('service_detail', (array) $decoded);
+            $request->getAttribute('service_detail');
             return $handler->handle($request);
         } catch (\Exception $e) {
             return $this->unauthorizedResponse($e->getMessage());
