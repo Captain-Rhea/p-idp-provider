@@ -2,7 +2,6 @@
 
 namespace App\Controllers;
 
-use App\Helpers\JWTHelper;
 use Exception;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -12,7 +11,6 @@ use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Support\Carbon;
 use App\Models\InviteMember;
 use App\Helpers\ResponseHandle;
-use App\Helpers\VerifyUserStatus;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Permission;
@@ -209,7 +207,7 @@ class MemberController
                 $mailer->send();
             }
 
-            return ResponseHandle::success($response, $invite, 'Invitation created successfully');
+            return ResponseHandle::success($response, $invite, 'The invitation has been successfully created.');
         } catch (PHPMailerException $e) {
             return ResponseHandle::error($response, 'Mailer Error: ' . $e->getMessage(), 500);
         } catch (Exception $e) {
@@ -240,7 +238,7 @@ class MemberController
                 'expires_at' => Carbon::now('Asia/Bangkok'),
             ]);
 
-            return ResponseHandle::success($response, [], 'Invitation rejected successfully');
+            return ResponseHandle::success($response, [], 'The invitation has been successfully rejected.');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
@@ -277,7 +275,7 @@ class MemberController
                 'expires_at' => $invite->expires_at,
             ];
 
-            return ResponseHandle::success($response, $inviteData, 'Invitation verify successfully');
+            return ResponseHandle::success($response, $inviteData, 'The invitation has been successfully verified.');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
@@ -386,7 +384,7 @@ class MemberController
 
             Capsule::commit();
 
-            return ResponseHandle::success($response, [], 'Invitation accepted successfully');
+            return ResponseHandle::success($response, [], 'The invitation has been successfully accepted.');
         } catch (Exception $e) {
             Capsule::rollBack();
             return ResponseHandle::error($response, $e->getMessage(), 500);
@@ -526,7 +524,7 @@ class MemberController
     }
 
     /**
-     * POST /v1/member/create
+     * POST /v1/member
      */
     public function createMember(Request $request, Response $response): Response
     {
@@ -614,7 +612,7 @@ class MemberController
 
             Capsule::commit();
 
-            return ResponseHandle::success($response, [], 'Member has been created successfully');
+            return ResponseHandle::success($response, [], 'The member has been successfully created.');
         } catch (Exception $e) {
             Capsule::rollBack();
             return ResponseHandle::error($response, $e->getMessage(), 500);
@@ -622,7 +620,7 @@ class MemberController
     }
 
     /**
-     * DELETE /v1/member/delete/{id}
+     * DELETE /v1/member/{id}
      */
     public function permanentlyDeleteMember(Request $request, Response $response, $args): Response
     {
@@ -641,14 +639,14 @@ class MemberController
 
             $user->delete();
 
-            return ResponseHandle::success($response, [], 'Member has been permanently deleted successfully');
+            return ResponseHandle::success($response, [], 'The member has been permanently deleted.');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
     }
 
     /**
-     * DELETE /v1/member/delete/soft/{id}
+     * DELETE /v1/member{id}/soft
      */
     public function softDeleteMember(Request $request, Response $response, $args): Response
     {
@@ -668,7 +666,7 @@ class MemberController
             $user->status_id = 3;
             $user->save();
 
-            return ResponseHandle::success($response, [], 'Member has been soft deleted successfully');
+            return ResponseHandle::success($response, [], 'The member has been successfully soft deleted.');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
@@ -695,7 +693,7 @@ class MemberController
             $user->status_id = 2;
             $user->save();
 
-            return ResponseHandle::success($response, [], 'Member has been suspended successfully');
+            return ResponseHandle::success($response, [], 'The member has been successfully suspended.');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
@@ -722,7 +720,7 @@ class MemberController
             $user->status_id = 1;
             $user->save();
 
-            return ResponseHandle::success($response, [], 'Member has been actived successfully');
+            return ResponseHandle::success($response, [], 'The member has been successfully activated.');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
@@ -756,7 +754,7 @@ class MemberController
                 $userRole->save();
             }
 
-            return ResponseHandle::success($response, [], 'Member has been actived successfully');
+            return ResponseHandle::success($response, [], 'The member\'s role has been successfully updated.');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
