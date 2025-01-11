@@ -399,6 +399,7 @@ class MemberController
     public function getMembers(Request $request, Response $response): Response
     {
         try {
+            $queryParams = $request->getQueryParams();
             $userId = $queryParams['user_id'] ?? null;
             $statusIds = $queryParams['status_id'] ?? null;
             $email = $queryParams['email'] ?? null;
