@@ -17,7 +17,7 @@ class MemberRoute extends BaseRoute
             $group->post('/invite/accept', [MemberController::class, 'acceptInvitation']);
 
             $group->get('', [MemberController::class, 'getMembers']);
-            $group->get('/{id}', [MemberController::class, 'getMemberById']);
+            $group->get('/batch', [MemberController::class, 'getMemberBatch']);
             $group->post('', [MemberController::class, 'createMember']);
             $group->delete('/{id}', [MemberController::class, 'permanentlyDeleteMember']);
             $group->delete('/{id}/soft', [MemberController::class, 'softDeleteMember']);

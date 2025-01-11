@@ -524,44 +524,50 @@ class MemberController
     }
 
     /**
-     * GET /v1/member/{id}
+     * GET /v1/member/batch
      */
-    public function getMemberById(Request $request, Response $response, $args): Response
+    public function getMemberBatch(Request $request, Response $response): Response
     {
         try {
-            $userId = $args['id'] ?? null;
+            $queryParams = $request->getQueryParams();
+            $userIds = $queryParams['ids'] ?? null;
 
-            if (!$userId) {
-                return ResponseHandle::error($response, 'User ID is required', 400);
+            if (!$userIds) {
+                return ResponseHandle::error($response, 'User IDs are required', 400);
             }
 
-            $user = User::with([
+            $userIdsArray = is_array($userIds) ? $userIds : explode(',', $userIds);
+
+            $users = User::with([
                 'status',
                 'userInfo',
                 'userInfoTranslation',
                 'roles'
-            ])->where('user_id', $userId)->first();
+            ])->whereIn('user_id', $userIdsArray)->get();
 
-            if (!$user) {
-                return ResponseHandle::error($response, 'User not found', 404);
+            if ($users->isEmpty()) {
+                return ResponseHandle::error($response, 'No users found for the provided IDs', 404);
             }
 
-            $memberData = [
-                'user_id' => $user->user_id,
-                'email' => $user->email,
-                'avatar_base_url' => $user->avatar_base_url,
-                'avatar_lazy_url' => $user->avatar_lazy_url,
-                'user_info' => $user->userInfoTranslation->map(function ($translation) {
-                    return [
-                        'language_code' => $translation->language_code,
-                        'first_name' => $translation->first_name,
-                        'last_name' => $translation->last_name,
-                        'nickname' => $translation->nickname
-                    ];
-                })->toArray(),
-            ];
+            $membersData = $users->map(function ($user) {
+                return [
+                    'user_id' => $user->user_id,
+                    'email' => $user->email,
+                    'avatar_base_url' => $user->avatar_base_url,
+                    'avatar_lazy_url' => $user->avatar_lazy_url,
+                    'user_info' => $user->userInfoTranslation->map(function ($translation) {
+                        return [
+                            'language_code' => $translation->language_code,
+                            'first_name' => $translation->first_name,
+                            'last_name' => $translation->last_name,
+                            'nickname' => $translation->nickname,
+                        ];
+                    })->toArray(),
+                ];
+            });
 
-            return ResponseHandle::success($response, $memberData, 'Member retrieved successfully');
+            // ส่งผลลัพธ์กลับในรูปแบบ array
+            return ResponseHandle::success($response, $membersData, 'Members retrieved successfully');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
