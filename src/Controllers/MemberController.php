@@ -134,7 +134,7 @@ class MemberController
             $expiresAt = Carbon::now('Asia/Bangkok')->addDays(7);
 
             $invite = InviteMember::create([
-                'inviter_id' => $inviter['user_id'],
+                'inviter_id' => $inviter,
                 'recipient_email' => $recipientEmail,
                 'domain' => $_ENV['FRONT_URL'],
                 'path' => $_ENV['FRONT_INVITE_PATH'],
