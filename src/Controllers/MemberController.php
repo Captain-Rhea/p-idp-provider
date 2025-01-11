@@ -524,6 +524,50 @@ class MemberController
     }
 
     /**
+     * GET /v1/member/{id}
+     */
+    public function getMemberById(Request $request, Response $response, $args): Response
+    {
+        try {
+            $userId = $args['id'] ?? null;
+
+            if (!$userId) {
+                return ResponseHandle::error($response, 'User ID is required', 400);
+            }
+
+            $user = User::with([
+                'status',
+                'userInfo',
+                'userInfoTranslation',
+                'roles'
+            ])->where('user_id', $userId)->first();
+
+            if (!$user) {
+                return ResponseHandle::error($response, 'User not found', 404);
+            }
+
+            $memberData = [
+                'user_id' => $user->user_id,
+                'email' => $user->email,
+                'avatar_base_url' => $user->avatar_base_url,
+                'avatar_lazy_url' => $user->avatar_lazy_url,
+                'user_info' => $user->userInfoTranslation->map(function ($translation) {
+                    return [
+                        'language_code' => $translation->language_code,
+                        'first_name' => $translation->first_name,
+                        'last_name' => $translation->last_name,
+                        'nickname' => $translation->nickname
+                    ];
+                })->toArray(),
+            ];
+
+            return ResponseHandle::success($response, $memberData, 'Member retrieved successfully');
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
      * POST /v1/member
      */
     public function createMember(Request $request, Response $response): Response
