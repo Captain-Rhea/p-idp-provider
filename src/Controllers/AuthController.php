@@ -96,7 +96,7 @@ class AuthController
 
             $tokenDecode = TokenJWTUtils::decodeToken($token);
             $expirationTime = Carbon::createFromTimestamp($tokenDecode['exp']);
-            if (Carbon::now()->diffInDays($expirationTime, false) <= 2) {
+            if (Carbon::now('Asia/Bangkok')->diffInDays($expirationTime, false) <= 2) {
                 $tokenExp = 60 * 60 * 24 * 7;
                 $newToken = TokenJWTUtils::generateToken([
                     'user_id' => $tokenDecode['user_id'],
