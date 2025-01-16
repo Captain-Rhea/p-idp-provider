@@ -9,7 +9,6 @@ use App\Helpers\ResponseHandle;
 use App\Models\ApiConnectionModel;
 use App\Utils\TokenUtils;
 
-
 class ConnectionController
 {
     // GET /v1/connection
