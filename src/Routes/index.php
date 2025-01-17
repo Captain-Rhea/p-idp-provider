@@ -9,11 +9,13 @@ use App\Routes\AuthRoute;
 use App\Routes\ConnectionRoute;
 use App\Routes\MemberRoute;
 use App\Routes\MyMemberRoute;
+use App\Routes\RolePermissionRoute;
 
 return function (App $app) {
     (new AuthRoute($app))->register();
     (new MemberRoute($app))->register();
     (new MyMemberRoute($app))->register();
+    (new RolePermissionRoute($app))->register();
 
     $connectionRouteEnabled = filter_var($_ENV['CONNECTION_ROUTE'] ?? false, FILTER_VALIDATE_BOOLEAN);
     if ($connectionRouteEnabled) {
