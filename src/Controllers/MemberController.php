@@ -136,7 +136,7 @@ class MemberController
                 'recipient_email' => $recipientEmail,
                 'domain' => $_ENV['FRONT_URL'],
                 'path' => $_ENV['FRONT_INVITE_PATH'],
-                'role_id' => $roleId,
+                'role_id' => intval($roleId),
                 'status_id' => 4,
                 'ref_code' => $refCode,
                 'expires_at' => $expiresAt
