@@ -21,6 +21,9 @@ use App\Models\UserRole;
 
 class MemberController
 {
+    /**
+     * GET /v1/member/invite
+     */
     public function getInvitation(Request $request, Response $response): Response
     {
         try {
