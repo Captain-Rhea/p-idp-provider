@@ -21,9 +21,6 @@ use App\Models\UserRole;
 
 class MemberController
 {
-    /**
-     * GET /v1/member/invite
-     */
     public function getInvitation(Request $request, Response $response): Response
     {
         try {
@@ -35,10 +32,7 @@ class MemberController
             $page = $queryParams['page'] ?? 1;
             $perPage = $queryParams['per_page'] ?? 10;
 
-            // $query = InviteMember::with(['inviter', 'status']);
-            $query = InviteMember::with(['inviter', 'status'])
-                ->leftJoin('roles', 'invite_member.role_id', '=', 'roles.id')
-                ->select('invite_member.*', 'roles.name as role_name', 'roles.description as role_description');
+            $query = InviteMember::with(['inviter', 'status']);
 
             // Apply filters
             if ($recipientEmail) {
@@ -61,7 +55,12 @@ class MemberController
             // Paginate results
             $invites = $query->paginate($perPage, ['*'], 'page', $page);
 
-            $formattedData = collect($invites->items())->map(function ($invite) {
+            // ดึงข้อมูล roles และแปลงเป็น key-value โดยใช้ role_id เป็น key
+            $roles = Role::all()->keyBy('id');
+
+            // Map roles เข้ากับ invites
+            $formattedData = collect($invites->items())->map(function ($invite) use ($roles) {
+                $role = $roles->get($invite->role_id);
                 return [
                     'id' => $invite->id,
                     'recipient_email' => $invite->recipient_email,
@@ -74,16 +73,16 @@ class MemberController
                         'name' => $invite->status->name,
                         'description' => $invite->status->description,
                     ],
+                    'role' => $role ? [
+                        'id' => $role->id,
+                        'name' => $role->name,
+                        'description' => $role->description,
+                    ] : null,
                     'inviter' => [
                         'user_id' => $invite->inviter->user_id,
                         'email' => $invite->inviter->email,
                         'avatar_base_url' => $invite->inviter->avatar_base_url,
                         'avatar_lazy_url' => $invite->inviter->avatar_lazy_url,
-                    ],
-                    'role' => [
-                        'role_id' => $invite->role_id,
-                        'name' => $invite->role_name,
-                        'description' => $invite->role_description,
                     ],
                     'expires_at' => $invite->expires_at,
                     'created_at' => $invite->created_at,
