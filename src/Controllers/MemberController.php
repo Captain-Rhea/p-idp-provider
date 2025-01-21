@@ -81,7 +81,7 @@ class MemberController
                         'avatar_lazy_url' => $invite->inviter->avatar_lazy_url,
                     ],
                     'role' => [
-                        'id' => $invite->id,
+                        'role_id' => $invite->role_id,
                         'name' => $invite->role_name,
                         'description' => $invite->role_description,
                     ],
