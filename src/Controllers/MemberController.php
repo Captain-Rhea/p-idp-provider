@@ -35,7 +35,10 @@ class MemberController
             $page = $queryParams['page'] ?? 1;
             $perPage = $queryParams['per_page'] ?? 10;
 
-            $query = InviteMember::with(['inviter', 'status']);
+            // $query = InviteMember::with(['inviter', 'status']);
+            $query = InviteMember::with(['inviter', 'status'])
+                ->leftJoin('roles', 'invite_member.role_id', '=', 'roles.id')
+                ->select('invite_member.*', 'roles.name as role_name', 'roles.description as role_description');
 
             // Apply filters
             if ($recipientEmail) {
@@ -76,6 +79,10 @@ class MemberController
                         'email' => $invite->inviter->email,
                         'avatar_base_url' => $invite->inviter->avatar_base_url,
                         'avatar_lazy_url' => $invite->inviter->avatar_lazy_url,
+                    ],
+                    'role' => [
+                        'name' => $invite->role_name,
+                        'description' => $invite->role_description,
                     ],
                     'expires_at' => $invite->expires_at,
                     'created_at' => $invite->created_at,
