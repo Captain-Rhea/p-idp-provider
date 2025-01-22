@@ -18,9 +18,17 @@ class VerifyUserStatus
     {
         switch ($status) {
             case UserStatusUtils::DELETED:
-                return ResponseHandle::error($response, 'Account not found', 404);
+                return ResponseHandle::error(
+                    $response,
+                    'Your account has been temporarily deactivated. Please restore your account to proceed.',
+                    403
+                );
             case UserStatusUtils::SUSPENDED:
-                return ResponseHandle::error($response, 'Your account is temporarily suspended', 401);
+                return ResponseHandle::error(
+                    $response,
+                    'Your account has been suspended. Please contact support for more information.',
+                    403
+                );
             case UserStatusUtils::ACTIVE:
                 return null;
             default:
