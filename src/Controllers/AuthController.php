@@ -11,6 +11,7 @@ use App\Helpers\VerifyUserStatus;
 use App\Models\User;
 use App\Helpers\LoginTransactionHandle;
 use App\Models\ForgotPassword;
+use App\Models\LoginTransaction;
 use App\Utils\TokenJWTUtils;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
@@ -437,6 +438,64 @@ class AuthController
             ];
 
             return ResponseHandle::success($response, $responseData, 'Password has been reset successfully');
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * GET /v1/auth/transaction/login
+     */
+    public function getLoginTransaction(Request $request, Response $response): Response
+    {
+        try {
+            $queryParams = $request->getQueryParams();
+            $page = (int)($queryParams['page'] ?? 1);
+            $perPage = (int)($queryParams['per_page'] ?? 10);
+            $userId = $queryParams['user_id'] ?? null;
+            $startDate = $queryParams['start_date'] ?? null;
+            $endDate = $queryParams['end_date'] ?? null;
+
+            $query = LoginTransaction::query();
+
+            if ($userId) {
+                $query->where('user_id', $userId);
+            }
+
+            if ($startDate && $endDate) {
+                $query->whereBetween('created_at', [$startDate, $endDate]);
+            } elseif ($startDate) {
+                $query->whereDate('created_at', '>=', $startDate);
+            } elseif ($endDate) {
+                $query->whereDate('created_at', '<=', $endDate);
+            }
+
+            $transactions = $query->paginate($perPage, ['*'], 'page', $page);
+
+            $formattedData = collect($transactions->items())->map(function ($transaction) {
+                return [
+                    'transaction_id' => $transaction->id,
+                    'user_id' => $transaction->user_id,
+                    'status' => $transaction->status,
+                    'ip_address' => $transaction->ip_address,
+                    'user_agent' => $transaction->user_agent,
+                    'created_at' => $transaction->created_at,
+                    'user' => $transaction->user ? [
+                        'user_id' => $transaction->user->user_id,
+                        'email' => $transaction->user->email
+                    ] : null,
+                ];
+            });
+
+            return ResponseHandle::success($response, [
+                'pagination' => [
+                    'total' => $transactions->total(),
+                    'per_page' => $transactions->perPage(),
+                    'current_page' => $transactions->currentPage(),
+                    'last_page' => $transactions->lastPage(),
+                ],
+                'data' => $formattedData,
+            ], 'Login Transaction list retrieved successfully');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
