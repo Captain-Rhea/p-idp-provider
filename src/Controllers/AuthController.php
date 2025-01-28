@@ -470,6 +470,8 @@ class AuthController
                 $query->whereDate('created_at', '<=', $endDate);
             }
 
+            $query->orderBy('created_at', 'desc');
+
             $transactions = $query->paginate($perPage, ['*'], 'page', $page);
 
             $formattedData = collect($transactions->items())->map(function ($transaction) {
