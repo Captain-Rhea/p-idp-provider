@@ -12,6 +12,13 @@ use App\Routes\MyMemberRoute;
 use App\Routes\RolePermissionRoute;
 
 return function (App $app) {
+    $app->get('/', function (Request $request, Response $response) {
+        $data = [
+            'version' => $_ENV['API_VERSION'] ?? 'Version Error!'
+        ];
+        return ResponseHandle::success($response, $data, 'IDP Provider - API Services');
+    });
+
     (new AuthRoute($app))->register();
     (new MemberRoute($app))->register();
     (new MyMemberRoute($app))->register();
