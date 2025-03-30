@@ -19,6 +19,7 @@ class AuthRoute extends BaseRoute
             $group->post('/send/forgot-mail', [AuthController::class, 'sendForgotMail']);
             $group->post('/send/forgot-mail/verify', [AuthController::class, 'forgotMailVerify']);
             $group->post('/send/forgot-mail/reset-password', [AuthController::class, 'forgotMailResetNewPassword']);
+            $group->post('/send/forgot-otp/reset-password', [AuthController::class, 'forgotMailResetNewPasswordByOTP']);
             // Transaction
             $group->get('/transaction/login', [AuthController::class, 'getLoginTransaction']);
         })->add(new AuthMiddleware());

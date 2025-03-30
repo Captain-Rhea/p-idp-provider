@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Helpers\LoginTransactionHandle;
 use App\Models\ForgotPassword;
 use App\Models\LoginTransaction;
+use App\Models\Otps;
 use App\Utils\TokenJWTUtils;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
@@ -498,6 +499,46 @@ class AuthController
                 ],
                 'data' => $formattedData,
             ], 'Login Transaction list retrieved successfully');
+        } catch (Exception $e) {
+            return ResponseHandle::error($response, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * POST /v1/auth/send/forgot-otp/reset-password
+     */
+    public function forgotMailResetNewPasswordByOTP(Request $request, Response $response): Response
+    {
+        try {
+            $body = json_decode((string)$request->getBody(), true);
+            $recipientEmail = $body['recipient_email'] ?? null;
+            $newPassword = $body['new_password'] ?? null;
+            $otpRef = $body['otp_ref'] ?? null;
+            $otpCode = $body['otp_code'] ?? null;
+
+            if (!$recipientEmail || !$newPassword || !$otpRef || !$otpCode) {
+                return ResponseHandle::error($response, 'Request body are required', 400);
+            }
+
+            $resetRecord = Otps::where('recipient_email', $recipientEmail)
+                ->where('ref', $otpRef)
+                ->where('otp_code', $otpCode)
+                ->where('is_used', true)
+                ->first();
+
+            if (!$resetRecord) {
+                return ResponseHandle::error($response, 'Invalid reset record', 404);
+            }
+
+            $user = User::whereRaw('LOWER(email) = ?', [strtolower($recipientEmail)])->first();
+            if (!$user) {
+                return ResponseHandle::error($response, 'User not found', 404);
+            }
+
+            $user->password = password_hash($newPassword, PASSWORD_DEFAULT);
+            $user->save();
+
+            return ResponseHandle::success($response, [], 'Password has been reset successfully');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
