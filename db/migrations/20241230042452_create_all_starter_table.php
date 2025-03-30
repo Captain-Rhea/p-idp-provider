@@ -134,5 +134,20 @@ final class CreateAllStarterTable extends AbstractMigration
             ->addColumn('updated_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP', 'update' => 'CURRENT_TIMESTAMP', 'null' => false])
             ->addIndex(['connection_key'], ['unique' => true, 'name' => 'idx_connection_key'])
             ->create();
+
+        // ตาราง otps
+        $otps = $this->table('otps', ['id' => true, 'signed' => false]);
+        $otps->addColumn('recipient_email', 'string', ['limit' => 255, 'null' => false])
+            ->addColumn('otp_code', 'string', ['limit' => 6, 'null' => false])
+            ->addColumn('type', 'string', ['limit' => 20, 'null' => false])
+            ->addColumn('ref', 'string', ['limit' => 50, 'null' => true])
+            ->addColumn('expires_at', 'datetime', ['null' => false])
+            ->addColumn('is_used', 'boolean', ['default' => false])
+            ->addColumn('created_at', 'datetime', ['null' => false])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['recipient_email'])
+            ->addIndex(['otp_code'])
+            ->addIndex(['ref'])
+            ->create();
     }
 }
