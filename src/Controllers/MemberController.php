@@ -18,6 +18,7 @@ use App\Models\UserInfo;
 use App\Models\UserInfoTranslation;
 use App\Models\UserPermission;
 use App\Models\UserRole;
+use Illuminate\Database\Capsule\Manager as DB;
 
 class MemberController
 {
@@ -132,6 +133,8 @@ class MemberController
                 ->where('expires_at', '>', Carbon::now('Asia/Bangkok'))
                 ->get();
 
+            DB::beginTransaction();
+
             foreach ($invites as $invite) {
                 $invite->expires_at = Carbon::now('Asia/Bangkok');
                 $invite->status_id = 7;
@@ -217,10 +220,14 @@ class MemberController
                 $mailer->send();
             }
 
+            DB::commit();
+
             return ResponseHandle::success($response, $invite, 'The invitation has been successfully created.');
         } catch (PHPMailerException $e) {
+            DB::rollBack();
             return ResponseHandle::error($response, 'Mailer Error: ' . $e->getMessage(), 500);
         } catch (Exception $e) {
+            DB::rollBack();
             return ResponseHandle::error($response, $e->getMessage(), 500);
         }
     }
