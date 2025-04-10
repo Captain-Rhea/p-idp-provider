@@ -56,13 +56,10 @@ class MemberController
                 $query->whereDate('created_at', '<=', $endDate);
             }
 
-            // Paginate results
-            $invites = $query->paginate($perPage, ['*'], 'page', $page);
+            $invites = $query->orderBy('expires_at', 'asc')->paginate($perPage, ['*'], 'page', $page);
 
-            // ดึงข้อมูล roles และแปลงเป็น key-value โดยใช้ role_id เป็น key
             $roles = Role::all()->keyBy('id');
 
-            // Map roles เข้ากับ invites
             $formattedData = collect($invites->items())->map(function ($invite) use ($roles) {
                 $role = $roles->get($invite->role_id);
                 return [
@@ -130,13 +127,17 @@ class MemberController
 
             $invites = InviteMember::where('recipient_email', $recipientEmail)
                 ->whereIn('status_id', [4, 5])
-                ->where('expires_at', '>', Carbon::now('Asia/Bangkok'))
                 ->get();
 
             DB::beginTransaction();
 
+            $now = Carbon::now('Asia/Bangkok');
+
             foreach ($invites as $invite) {
-                $invite->expires_at = Carbon::now('Asia/Bangkok');
+                if ($invite->expires_at > $now) {
+                    $invite->expires_at = $now;
+                }
+
                 $invite->status_id = 7;
                 $invite->save();
             }

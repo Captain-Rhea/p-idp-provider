@@ -1,4 +1,7 @@
 {
+  "config": {
+    "process-timeout": 0
+  },
   "scripts": {
     "start": "php -S localhost:4200 -t public",
     "db-create": "vendor/bin/phinx create",
