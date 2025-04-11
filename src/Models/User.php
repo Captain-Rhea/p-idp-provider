@@ -44,6 +44,11 @@ class User extends Model
         return $this->hasMany(UserInfoTranslation::class, 'user_id');
     }
 
+    public function loginTransaction()
+    {
+        return $this->hasMany(LoginTransaction::class, 'user_id');
+    }
+
     protected static function boot()
     {
         parent::boot();

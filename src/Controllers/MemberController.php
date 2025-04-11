@@ -433,7 +433,12 @@ class MemberController
                 'status',
                 'userInfo',
                 'userInfoTranslation',
-                'roles'
+                'roles',
+                'loginTransaction' => function ($query) {
+                    $query->where('status', 'success')
+                        ->orderBy('created_at', 'desc')
+                        ->limit(1);
+                }
             ]);
 
             if ($userId) {
@@ -488,10 +493,8 @@ class MemberController
                 $query->whereDate('created_at', '<=', $endDate);
             }
 
-            // Paginate Results
             $members = $query->paginate($perPage, ['*'], 'page', $page);
 
-            // จัดรูปแบบข้อมูลสำหรับ Response
             $memberData = collect($members->items())->map(function ($userModel) {
                 return [
                     'user_id' => $userModel->user_id,
@@ -523,7 +526,11 @@ class MemberController
                             'name' => $role->name,
                             'description' => $role->description,
                         ];
-                    })->toArray()
+                    })->toArray(),
+                    'last_login' => $userModel->loginTransaction->isNotEmpty() ? [
+                        'status' => $userModel->loginTransaction->first()->status,
+                        'created_at' => $userModel->loginTransaction->first()->created_at,
+                    ] : null
                 ];
             });
 
