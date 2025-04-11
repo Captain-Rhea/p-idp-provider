@@ -435,8 +435,7 @@ class MemberController
                 'userInfoTranslation',
                 'roles',
                 'loginTransaction' => function ($query) {
-                    $query->where('status', 'success')
-                        ->orderBy('created_at', 'desc')
+                    $query->orderBy('created_at', 'desc')
                         ->limit(1);
                 }
             ]);
@@ -616,8 +615,8 @@ class MemberController
             $lastNameEn = $body['last_name_en'] ?? null;
             $nicknameEn = $body['nickname_en'] ?? null;
 
-            if (!$email || !$password || !$roleId || !$phone) {
-                return ResponseHandle::error($response, 'Email, password, role ID and phone are required', 400);
+            if (!$email || !$password || !$roleId) {
+                return ResponseHandle::error($response, 'Email, password and role ID are required', 400);
             }
 
             if (User::where('email', $email)->exists()) {
