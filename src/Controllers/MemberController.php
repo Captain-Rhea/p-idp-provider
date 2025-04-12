@@ -492,7 +492,7 @@ class MemberController
                 $query->whereDate('created_at', '<=', $endDate);
             }
 
-            $members = $query->paginate($perPage, ['*'], 'page', $page);
+            $members = $query->orderBy('user_id', 'asc')->paginate($perPage, ['*'], 'page', $page);
 
             $memberData = collect($members->items())->map(function ($userModel) {
                 return [
