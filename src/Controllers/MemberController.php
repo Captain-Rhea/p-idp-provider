@@ -318,8 +318,8 @@ class MemberController
             $lastNameEn = $body['last_name_en'] ?? null;
             $nicknameEn = $body['nickname_en'] ?? null;
 
-            if (!$refCode || !$recipientEmail || !$password || !$roleId || !$phone) {
-                return ResponseHandle::error($response, 'Ref Code, Email, password, role ID and phone are required', 400);
+            if (!$refCode || !$recipientEmail || !$password || !$roleId) {
+                return ResponseHandle::error($response, 'Ref Code, Email, password and role ID are required', 400);
             }
 
             $invite = InviteMember::where('ref_code', $refCode)
