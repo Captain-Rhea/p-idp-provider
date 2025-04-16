@@ -97,9 +97,9 @@ class MyMemberController
             $body = json_decode((string)$request->getBody(), true);
             $avatarId = $body['avatar_id'] ?? null;
             $avatarBaseUrl = $body['avatar_base_url'] ?? null;
-            $avatarLazyUrl = $body['avatar_lazy_url'] ?? null;
+            // $avatarLazyUrl = $body['avatar_lazy_url'] ?? null;
 
-            if (!$userId || !$avatarId || !$avatarBaseUrl || !$avatarLazyUrl) {
+            if (!$userId || !$avatarId || !$avatarBaseUrl) {
                 return ResponseHandle::error($response, 'All required fields must be provided', 400);
             }
 
@@ -110,12 +110,12 @@ class MyMemberController
 
             $user->avatar_id = $avatarId;
             $user->avatar_base_url = $avatarBaseUrl;
-            $user->avatar_lazy_url = $avatarLazyUrl;
+            // $user->avatar_lazy_url = $avatarLazyUrl;
             $user->save();
 
             return ResponseHandle::success($response, [
                 'avatar_base_url' => $avatarBaseUrl,
-                'avatar_lazy_url' => $avatarLazyUrl,
+                // 'avatar_lazy_url' => $avatarLazyUrl,
             ], 'Avatar uploaded successfully');
         } catch (Exception $e) {
             return ResponseHandle::error($response, $e->getMessage(), 500);

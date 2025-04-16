@@ -27,7 +27,7 @@ class VerifyUserStatus
                 return ResponseHandle::error(
                     $response,
                     'Your account has been suspended. Please contact support for more information.',
-                    403
+                    401
                 );
             case UserStatusUtils::ACTIVE:
                 return null;
